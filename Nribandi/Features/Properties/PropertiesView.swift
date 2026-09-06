@@ -2,9 +2,16 @@ import SwiftUI
 
 struct PropertiesView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var session: SessionStore
+
     @State private var items: [PropertyItem] = []
     @State private var errorMessage: String?
     @State private var isLoading = true
+    @State private var showCreate = false
+
+    private var canManageProperties: Bool {
+        session.user?.role == .ADMIN || session.user?.role == .OWNER
+    }
 
     var body: some View {
         NavigationStack {
@@ -14,7 +21,11 @@ struct PropertiesView: View {
                 } else if let errorMessage, items.isEmpty {
                     ContentUnavailableView("Could not load", systemImage: "building.2", description: Text(errorMessage))
                 } else if items.isEmpty {
-                    ContentUnavailableView("No properties", systemImage: "building.2", description: Text("Nothing visible for this account yet."))
+                    ContentUnavailableView(
+                        "No properties",
+                        systemImage: "building.2",
+                        description: Text(canManageProperties ? "Tap + to add a property." : "Nothing visible for this account yet.")
+                    )
                 } else {
                     List(items) { property in
                         NavigationLink(value: property) {
@@ -35,7 +46,19 @@ struct PropertiesView: View {
                 }
             }
             .navigationTitle("Properties")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { EnvBadge(env: appState.environment) } }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack(spacing: 12) {
+                        if canManageProperties {
+                            Button { showCreate = true } label: { Image(systemName: "plus") }
+                        }
+                        EnvBadge(env: appState.environment)
+                    }
+                }
+            }
+            .sheet(isPresented: $showCreate) {
+                PropertyFormView(mode: .create) { _ in await load() }
+            }
             .task { await load() }
         }
     }

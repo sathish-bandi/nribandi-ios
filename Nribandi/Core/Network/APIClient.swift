@@ -195,6 +195,70 @@ final class APIClient {
         )
     }
 
+    func createProperty(_ body: CreatePropertyBody) async throws -> PropertyItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/properties",
+            body: body,
+            authorized: true,
+            as: PropertyItem.self
+        )
+    }
+
+    func updateProperty(id: UUID, _ body: UpdatePropertyBody) async throws -> PropertyItem {
+        try await send(
+            method: "PUT",
+            path: "/api/v1/properties/\(id.uuidString.lowercased())",
+            body: body,
+            authorized: true,
+            as: PropertyItem.self
+        )
+    }
+
+    func users(role: String? = nil, page: Int = 0, size: Int = 50) async throws -> PageResponse<ManagedUserItem> {
+        var path = "/api/v1/users?page=\(page)&size=\(size)"
+        if let role, !role.isEmpty {
+            path += "&role=\(role)"
+        }
+        return try await send(
+            method: "GET",
+            path: path,
+            body: Optional<String>.none,
+            authorized: true,
+            as: PageResponse<ManagedUserItem>.self
+        )
+    }
+
+    func createUser(_ body: CreateUserBody) async throws -> ManagedUserItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/users",
+            body: body,
+            authorized: true,
+            as: ManagedUserItem.self
+        )
+    }
+
+    func updateUser(id: UUID, _ body: UpdateUserBody) async throws -> ManagedUserItem {
+        try await send(
+            method: "PATCH",
+            path: "/api/v1/users/\(id.uuidString.lowercased())",
+            body: body,
+            authorized: true,
+            as: ManagedUserItem.self
+        )
+    }
+
+    func deactivateUser(id: UUID) async throws -> ManagedUserItem {
+        try await send(
+            method: "DELETE",
+            path: "/api/v1/users/\(id.uuidString.lowercased())",
+            body: Optional<String>.none,
+            authorized: true,
+            as: ManagedUserItem.self
+        )
+    }
+
     private func send<Body: Encodable, Response: Decodable>(
         method: String,
         path: String,

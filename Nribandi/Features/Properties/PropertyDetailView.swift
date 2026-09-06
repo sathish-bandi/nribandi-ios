@@ -2,11 +2,21 @@ import SwiftUI
 
 struct PropertyDetailView: View {
     @EnvironmentObject private var appState: AppState
-    let property: PropertyItem
+    @EnvironmentObject private var session: SessionStore
 
+    @State private var property: PropertyItem
     @State private var units: [UnitItem] = []
     @State private var errorMessage: String?
     @State private var isLoading = true
+    @State private var showEdit = false
+
+    init(property: PropertyItem) {
+        _property = State(initialValue: property)
+    }
+
+    private var canEdit: Bool {
+        session.user?.role == .ADMIN || session.user?.role == .OWNER
+    }
 
     var body: some View {
         List {
@@ -16,6 +26,9 @@ struct PropertyDetailView: View {
                 Text("\(property.state) · \(property.propertyType) · \(property.propertyPurpose)")
                     .font(.footnote)
                     .foregroundStyle(NriTheme.slate)
+                if let ownerName = property.ownerName {
+                    Text("Owner: \(ownerName)").font(.footnote).foregroundStyle(NriTheme.slate)
+                }
             }
             Section("Units") {
                 if isLoading {
@@ -41,6 +54,18 @@ struct PropertyDetailView: View {
         }
         .navigationTitle(property.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if canEdit {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Edit") { showEdit = true }
+                }
+            }
+        }
+        .sheet(isPresented: $showEdit) {
+            PropertyFormView(mode: .edit(property)) { updated in
+                property = updated
+            }
+        }
         .task { await loadUnits() }
         .refreshable { await loadUnits() }
     }

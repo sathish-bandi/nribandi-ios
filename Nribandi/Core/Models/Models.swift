@@ -247,3 +247,68 @@ struct UnitListRow: Identifiable, Hashable {
     let propertyName: String
     let unit: UnitItem
 }
+
+struct ManagedUserItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let email: String
+    let phone: String?
+    let fullName: String
+    let role: UserRole
+    let active: Bool
+    let createdAt: String?
+}
+
+struct CreateUserBody: Encodable {
+    let email: String
+    let phone: String?
+    let fullName: String
+    let password: String
+    let role: String
+}
+
+struct UpdateUserBody: Encodable {
+    var fullName: String?
+    var phone: String?
+    var active: Bool?
+}
+
+struct CreatePropertyBody: Encodable {
+    let name: String
+    let address: String
+    let locality: String
+    let city: String
+    let state: String
+    let pincode: String
+    let latitude: Decimal?
+    let longitude: Decimal?
+    let numberOfFloors: Int
+    let propertyType: String
+    let propertyPurpose: String?
+    let ownerId: UUID?
+}
+
+struct UpdatePropertyBody: Encodable {
+    var name: String?
+    var address: String?
+    var locality: String?
+    var city: String?
+    var state: String?
+    var pincode: String?
+    var latitude: Decimal?
+    var longitude: Decimal?
+    var numberOfFloors: Int?
+    var propertyType: String?
+    var propertyPurpose: String?
+}
+
+enum PropertyTypeOption: String, CaseIterable, Identifiable {
+    case APARTMENT, INDEPENDENT_HOUSE, VILLA, HIGH_RISE, MULTI_STOREY
+    var id: String { rawValue }
+    var title: String { rawValue.replacingOccurrences(of: "_", with: " ").capitalized }
+}
+
+enum PropertyPurposeOption: String, CaseIterable, Identifiable {
+    case RESIDENTIAL, COMMERCIAL
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+}

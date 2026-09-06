@@ -6,6 +6,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		42AB9E73206A46B5BC6D339B /* PropertyFormView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0516A5382C8846C6A9ED28D9 /* PropertyFormView.swift */; };
+		2E5CE399310A499FB5EE11EF /* PeopleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88DCE0A8A18D429894F34D98 /* PeopleView.swift */; };
 		0E779D860ED8487D8CF25298 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EDE403912B3425C9CFA2D02 /* AppState.swift */; };
 		380ACE4C01B940419B862B56 /* NribandiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E2D91A9AF040448E5543F2 /* NribandiApp.swift */; };
 		38ABAC7F63B74A10B1B8013C /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58819165AB674718837440D6 /* RootView.swift */; };
@@ -28,6 +30,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0516A5382C8846C6A9ED28D9 /* PropertyFormView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PropertyFormView.swift; sourceTree = "<group>"; };
+		88DCE0A8A18D429894F34D98 /* PeopleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleView.swift; sourceTree = "<group>"; };
 		1B5C489D522F4CAEA305A100 /* Nribandi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nribandi.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3EDE403912B3425C9CFA2D02 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
 		27E2D91A9AF040448E5543F2 /* NribandiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NribandiApp.swift; sourceTree = "<group>"; };
@@ -62,6 +66,14 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		8FEBDE2D462F46329D54324F /* People */ = {
+			isa = PBXGroup;
+			children = (
+				88DCE0A8A18D429894F34D98 /* PeopleView.swift */,
+			);
+			path = People;
+			sourceTree = "<group>";
+		};
 		93C1A5389EA94E2E83547B15 = {
 			isa = PBXGroup;
 			children = (
@@ -165,6 +177,7 @@
 		114123DDBAE0419789033667 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				8FEBDE2D462F46329D54324F /* People */,
 				4A1134084F254465A984658A /* Login */,
 				540896F0574D485DA37A75D2 /* Home */,
 				A564B0CE06C346888FC0122C /* Dashboard */,
@@ -203,6 +216,7 @@
 		637CDB1F148D458A9FA4B908 /* Properties */ = {
 			isa = PBXGroup;
 			children = (
+				0516A5382C8846C6A9ED28D9 /* PropertyFormView.swift */,
 				7102416AF23046FFA532FAD1 /* PropertiesView.swift */,
 				B0A84FF396244BD5B8A52565 /* PropertyDetailView.swift */,
 			);
@@ -315,6 +329,8 @@
 				9EC8B80D835D480DAF0410FE /* PropertiesView.swift in Sources */,
 				4AFC64286B0B40DDB09FF7B7 /* PropertyDetailView.swift in Sources */,
 				C41B1E3B5F4745E2827B4393 /* ServiceRequestsView.swift in Sources */,
+				2E5CE399310A499FB5EE11EF /* PeopleView.swift in Sources */,
+				42AB9E73206A46B5BC6D339B /* PropertyFormView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

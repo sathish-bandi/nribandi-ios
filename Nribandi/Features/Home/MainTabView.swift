@@ -11,6 +11,10 @@ struct MainTabView: View {
             }
             PropertiesView()
                 .tabItem { Label("Properties", systemImage: "building.2.fill") }
+            if showsPeopleTab {
+                PeopleView()
+                    .tabItem { Label(peopleTabTitle, systemImage: "person.2.fill") }
+            }
             ServiceRequestsView()
                 .tabItem { Label("Requests", systemImage: "wrench.and.screwdriver.fill") }
             if showsOpsTabs {
@@ -26,5 +30,11 @@ struct MainTabView: View {
     private var showsOpsTabs: Bool {
         let role = session.user?.role
         return role == .ADMIN || role == .EMPLOYEE
+    }
+
+    private var showsPeopleTab: Bool { showsOpsTabs }
+
+    private var peopleTabTitle: String {
+        session.user?.role == .EMPLOYEE ? "Tenants" : "People"
     }
 }
