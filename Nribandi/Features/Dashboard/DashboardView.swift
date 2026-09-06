@@ -21,7 +21,7 @@ struct DashboardView: View {
                                     Text("No demo data yet")
                                         .font(.headline)
                                         .foregroundStyle(NriTheme.ink)
-                                    Text("The API is connected, but the database is empty. In the backend repo run:\n\n./scripts/local-seed.sh\n\nThen pull to refresh this screen.")
+                                    Text("The API is connected, but Postgres has no demo rows yet.\n\nIn rental-property-app on your Mac:\n\n1. ./scripts/local-up.sh\n2. ./scripts/local-seed.sh\n\nOr double-click SEED-ON-MAC.command\n\nThen swipe down to refresh. Login: admin@nribandi.local / Nribandi@123")
                                         .font(.subheadline)
                                         .foregroundStyle(NriTheme.slate)
                                 }
