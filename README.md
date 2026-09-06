@@ -15,6 +15,30 @@ This repository is **iOS only**. The Spring Boot API lives in a separate repo:
 
 Switch environment on the login screen or in **Profile**. Changing environment signs you out.
 
+
+## Quick start scripts (Mac)
+
+From this repo:
+
+```bash
+chmod +x START-ON-MAC.command CHECK-BACKEND.command scripts/*.sh
+./scripts/run-local.sh
+```
+
+Or in Finder:
+
+- **`START-ON-MAC.command`** — checks Local backend (`:8082`), then opens Xcode
+- **`CHECK-BACKEND.command`** — only checks whether the API is up
+
+Then in Xcode press **Run (⌘R)**. Keep environment **Local**.
+
+Login: `admin@nribandi.local` / `Nribandi@123`
+
+The backend must be started separately from
+[`rental-property-app`](https://github.com/sathish-bandi/rental-property-app)
+(`./scripts/local-up.sh` or `START-ON-MAC.command` there).
+
+
 ## Run on your MacBook
 
 ### 1. Start the backend (separate repo)
