@@ -302,11 +302,18 @@ struct ServiceRequestDetailView: View {
     @State private var isLoading = true
     @State private var isCancelling = false
     @State private var showCancelConfirm = false
+    @State private var showAssign = false
+    @State private var showUpdateStatus = false
 
     private var canCancel: Bool {
         guard let item, item.canCancel else { return false }
         let role = session.user?.role
         return role == .OWNER || role == .TENANT
+    }
+
+    private var canStaffAct: Bool {
+        let role = session.user?.role
+        return role == .ADMIN || role == .EMPLOYEE
     }
 
     var body: some View {
@@ -334,6 +341,13 @@ struct ServiceRequestDetailView: View {
                         }
                         if let raised = item.raisedByName {
                             LabeledContent("Raised by", value: raised)
+                        }
+                    }
+
+                    if canStaffAct {
+                        Section("Staff actions") {
+                            Button("Assign employee") { showAssign = true }
+                            Button("Update status") { showUpdateStatus = true }
                         }
                     }
 
@@ -383,6 +397,21 @@ struct ServiceRequestDetailView: View {
         }
         .navigationTitle("Request")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showAssign) {
+            AssignEmployeeSheet(title: "Assign request") { employeeId in
+                item = try await appState.api.assignServiceRequest(id: requestId, employeeUserId: employeeId)
+                history = try await appState.api.serviceRequestHistory(id: requestId)
+            }
+        }
+        .sheet(isPresented: $showUpdateStatus) {
+            UpdateServiceRequestStatusSheet(current: item?.status ?? "OPEN") { status, comments in
+                item = try await appState.api.updateServiceRequestStatus(
+                    id: requestId,
+                    UpdateServiceRequestStatusBody(status: status, comments: comments)
+                )
+                history = try await appState.api.serviceRequestHistory(id: requestId)
+            }
+        }
         .task { await load() }
         .refreshable { await load() }
         .confirmationDialog(
@@ -418,6 +447,140 @@ struct ServiceRequestDetailView: View {
         do {
             item = try await appState.api.cancelServiceRequest(id: requestId)
             history = try await appState.api.serviceRequestHistory(id: requestId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+struct AssignEmployeeSheet: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    let title: String
+    var onAssign: (UUID) async throws -> Void
+
+    @State private var employees: [ManagedUserItem] = []
+    @State private var selectedEmployeeId: UUID?
+    @State private var errorMessage: String?
+    @State private var isSaving = false
+    @State private var isLoading = true
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if isLoading {
+                    ProgressView("Loading employees…")
+                } else {
+                    Section("Employee") {
+                        if employees.isEmpty {
+                            Text("No active employees found.")
+                                .foregroundStyle(NriTheme.slate)
+                        } else {
+                            Picker("Assign to", selection: $selectedEmployeeId) {
+                                Text("Select").tag(Optional<UUID>.none)
+                                ForEach(employees) { employee in
+                                    Text(employee.fullName).tag(Optional(employee.id))
+                                }
+                            }
+                        }
+                    }
+                }
+                if let errorMessage {
+                    Section { Text(errorMessage).foregroundStyle(NriTheme.terracotta) }
+                }
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Assign") { Task { await save() } }
+                        .disabled(isSaving || selectedEmployeeId == nil)
+                }
+            }
+            .task { await load() }
+        }
+    }
+
+    private func load() async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            employees = try await appState.api.users(role: "EMPLOYEE", size: 100).content.filter(\.active)
+            selectedEmployeeId = employees.first?.id
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func save() async {
+        guard let selectedEmployeeId else { return }
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+        do {
+            try await onAssign(selectedEmployeeId)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct UpdateServiceRequestStatusSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let current: String
+    var onSave: (String, String?) async throws -> Void
+
+    @State private var status: ServiceRequestStatusOption
+    @State private var comments = ""
+    @State private var errorMessage: String?
+    @State private var isSaving = false
+
+    init(current: String, onSave: @escaping (String, String?) async throws -> Void) {
+        self.current = current
+        self.onSave = onSave
+        _status = State(initialValue: ServiceRequestStatusOption(rawValue: current) ?? .OPEN)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Status") {
+                    Picker("Status", selection: $status) {
+                        ForEach(ServiceRequestStatusOption.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                    TextField("Comments (optional)", text: $comments, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+                if let errorMessage {
+                    Section { Text(errorMessage).foregroundStyle(NriTheme.terracotta) }
+                }
+            }
+            .navigationTitle("Update status")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { Task { await save() } }
+                        .disabled(isSaving)
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+        let trimmed = comments.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            try await onSave(status.rawValue, trimmed.isEmpty ? nil : trimmed)
+            dismiss()
         } catch {
             errorMessage = error.localizedDescription
         }

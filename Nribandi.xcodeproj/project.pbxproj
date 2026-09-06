@@ -27,6 +27,11 @@
 		4AFC64286B0B40DDB09FF7B7 /* PropertyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0A84FF396244BD5B8A52565 /* PropertyDetailView.swift */; };
 		C41B1E3B5F4745E2827B4393 /* ServiceRequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB13033F03824279A94FFE54 /* ServiceRequestsView.swift */; };
 		B21F5CEF2D644DB0BE72ABA9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F6AE81627DF34935B1B5D2BC /* Assets.xcassets */; };
+		73134F60A67C41F298D6975A /* UnitDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 834A8C6D5C47402188CC4FE8 /* UnitDetailView.swift */; };
+		983656276A1342F59CE8B339 /* OpsHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66E5302F728C4CBAAF0AD335 /* OpsHubView.swift */; };
+		B2CAA1E7620D4A90B8E9306D /* InspectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81C4D8E76F3F472FB47A26BE /* InspectionsView.swift */; };
+		3A5A409BFF854BF099D4903A /* InvoicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C780855D95F4CC68F7804E5 /* InvoicesView.swift */; };
+		88DDF222B6D34CFAADC50A17 /* TenantVerificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5596D19391248E0A4DF2075 /* TenantVerificationView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -53,6 +58,11 @@
 		EB13033F03824279A94FFE54 /* ServiceRequestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceRequestsView.swift; sourceTree = "<group>"; };
 		9CFA40D0A83A489F9C592FE7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		F6AE81627DF34935B1B5D2BC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		834A8C6D5C47402188CC4FE8 /* UnitDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnitDetailView.swift; sourceTree = "<group>"; };
+		66E5302F728C4CBAAF0AD335 /* OpsHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpsHubView.swift; sourceTree = "<group>"; };
+		81C4D8E76F3F472FB47A26BE /* InspectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectionsView.swift; sourceTree = "<group>"; };
+		3C780855D95F4CC68F7804E5 /* InvoicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicesView.swift; sourceTree = "<group>"; };
+		F5596D19391248E0A4DF2075 /* TenantVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TenantVerificationView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -184,6 +194,9 @@
 				637CDB1F148D458A9FA4B908 /* Properties */,
 				6606730B42194A8CB6554FFC /* ServiceRequests */,
 				A1A9E127CC004881960CB963 /* Enquiries */,
+				4062B930B9754828B467977A /* Inspections */,
+				B6911D4122A1409DA73783BC /* Invoices */,
+				6264B5F9B92241CE9A58D96F /* KYC */,
 				CCBBE0CCB04D4143BEED6A30 /* Profile */,
 			);
 			path = Features;
@@ -201,6 +214,7 @@
 			isa = PBXGroup;
 			children = (
 				E9079F47FA634BA6B5F5F138 /* MainTabView.swift */,
+				66E5302F728C4CBAAF0AD335 /* OpsHubView.swift */,
 			);
 			path = Home;
 			sourceTree = "<group>";
@@ -219,6 +233,7 @@
 				0516A5382C8846C6A9ED28D9 /* PropertyFormView.swift */,
 				7102416AF23046FFA532FAD1 /* PropertiesView.swift */,
 				B0A84FF396244BD5B8A52565 /* PropertyDetailView.swift */,
+				834A8C6D5C47402188CC4FE8 /* UnitDetailView.swift */,
 			);
 			path = Properties;
 			sourceTree = "<group>";
@@ -245,6 +260,30 @@
 				0360B81BE9C54F4CB5C24739 /* ProfileView.swift */,
 			);
 			path = Profile;
+			sourceTree = "<group>";
+		};
+		4062B930B9754828B467977A /* Inspections */ = {
+			isa = PBXGroup;
+			children = (
+				81C4D8E76F3F472FB47A26BE /* InspectionsView.swift */,
+			);
+			path = Inspections;
+			sourceTree = "<group>";
+		};
+		B6911D4122A1409DA73783BC /* Invoices */ = {
+			isa = PBXGroup;
+			children = (
+				3C780855D95F4CC68F7804E5 /* InvoicesView.swift */,
+			);
+			path = Invoices;
+			sourceTree = "<group>";
+		};
+		6264B5F9B92241CE9A58D96F /* KYC */ = {
+			isa = PBXGroup;
+			children = (
+				F5596D19391248E0A4DF2075 /* TenantVerificationView.swift */,
+			);
+			path = KYC;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -331,6 +370,11 @@
 				C41B1E3B5F4745E2827B4393 /* ServiceRequestsView.swift in Sources */,
 				2E5CE399310A499FB5EE11EF /* PeopleView.swift in Sources */,
 				42AB9E73206A46B5BC6D339B /* PropertyFormView.swift in Sources */,
+				73134F60A67C41F298D6975A /* UnitDetailView.swift in Sources */,
+				983656276A1342F59CE8B339 /* OpsHubView.swift in Sources */,
+				B2CAA1E7620D4A90B8E9306D /* InspectionsView.swift in Sources */,
+				3A5A409BFF854BF099D4903A /* InvoicesView.swift in Sources */,
+				88DDF222B6D34CFAADC50A17 /* TenantVerificationView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

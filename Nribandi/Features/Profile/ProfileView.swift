@@ -4,6 +4,8 @@ struct ProfileView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var session: SessionStore
 
+    private var role: UserRole? { session.user?.role }
+
     var body: some View {
         NavigationStack {
             List {
@@ -15,6 +17,29 @@ struct ProfileView: View {
                         if let phone = user.phone { LabeledContent("Phone", value: phone) }
                     }
                 }
+
+                if role == .TENANT {
+                    Section("Verification") {
+                        NavigationLink("My KYC") {
+                            TenantVerificationView()
+                        }
+                    }
+                }
+
+                if role == .ADMIN || role == .EMPLOYEE {
+                    Section("Ops shortcuts") {
+                        NavigationLink("KYC review") {
+                            KycReviewListView(embedsInParentNavigation: true)
+                        }
+                        NavigationLink("Inspections") {
+                            InspectionsView(embedsInParentNavigation: true)
+                        }
+                        NavigationLink("Invoices") {
+                            InvoicesView(embedsInParentNavigation: true)
+                        }
+                    }
+                }
+
                 Section("API environment") {
                     Picker("Environment", selection: Binding(
                         get: { appState.environment },

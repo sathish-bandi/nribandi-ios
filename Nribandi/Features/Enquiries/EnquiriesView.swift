@@ -5,18 +5,19 @@ struct EnquiriesView: View {
     @State private var items: [EnquiryItem] = []
     @State private var errorMessage: String?
     @State private var isLoading = true
+    var embedsInParentNavigation = false
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if isLoading && items.isEmpty {
-                    ProgressView("Loading enquiries…")
-                } else if let errorMessage, items.isEmpty {
-                    ContentUnavailableView("Could not load", systemImage: "bubble.left", description: Text(errorMessage))
-                } else if items.isEmpty {
-                    ContentUnavailableView("No enquiries", systemImage: "tray", description: Text("WhatsApp and manual leads will appear here."))
-                } else {
-                    List(items) { item in
+        Group {
+            if isLoading && items.isEmpty {
+                ProgressView("Loading enquiries…")
+            } else if let errorMessage, items.isEmpty {
+                ContentUnavailableView("Could not load", systemImage: "bubble.left", description: Text(errorMessage))
+            } else if items.isEmpty {
+                ContentUnavailableView("No enquiries", systemImage: "tray", description: Text("WhatsApp and manual leads will appear here."))
+            } else {
+                List(items) { item in
+                    NavigationLink(value: item) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(item.customerName).font(.headline)
                             Text(item.mobileNumber).font(.subheadline.monospaced()).foregroundStyle(NriTheme.slate)
@@ -31,14 +32,22 @@ struct EnquiriesView: View {
                         }
                         .padding(.vertical, 4)
                     }
-                    .listStyle(.plain)
-                    .refreshable { await load() }
                 }
+                .listStyle(.plain)
+                .refreshable { await load() }
             }
-            .navigationTitle("Enquiries")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { EnvBadge(env: appState.environment) } }
-            .task { await load() }
         }
+        .navigationTitle("Enquiries")
+        .navigationDestination(for: EnquiryItem.self) { item in
+            EnquiryDetailView(enquiryId: item.id)
+        }
+        .toolbar {
+            if !embedsInParentNavigation {
+                ToolbarItem(placement: .topBarTrailing) { EnvBadge(env: appState.environment) }
+            }
+        }
+        .task { await load() }
+        .modifier(OptionalNavigationStack(enabled: !embedsInParentNavigation))
     }
 
     private func load() async {
@@ -47,5 +56,162 @@ struct EnquiriesView: View {
         defer { isLoading = false }
         do { items = try await appState.api.enquiries().content }
         catch { errorMessage = error.localizedDescription }
+    }
+}
+
+private struct OptionalNavigationStack: ViewModifier {
+    let enabled: Bool
+    func body(content: Content) -> some View {
+        if enabled {
+            NavigationStack { content }
+        } else {
+            content
+        }
+    }
+}
+
+struct EnquiryDetailView: View {
+    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var session: SessionStore
+
+    let enquiryId: UUID
+
+    @State private var item: EnquiryItem?
+    @State private var errorMessage: String?
+    @State private var isLoading = true
+    @State private var showAssign = false
+    @State private var showStatus = false
+
+    private var canStaffAct: Bool {
+        let role = session.user?.role
+        return role == .ADMIN || role == .EMPLOYEE
+    }
+
+    var body: some View {
+        Group {
+            if isLoading && item == nil {
+                ProgressView("Loading…")
+            } else if let errorMessage, item == nil {
+                ContentUnavailableView("Could not load", systemImage: "bubble.left", description: Text(errorMessage))
+            } else if let item {
+                List {
+                    Section("Lead") {
+                        LabeledContent("Name", value: item.customerName)
+                        LabeledContent("Mobile", value: item.mobileNumber)
+                        if let whatsapp = item.whatsappNumber {
+                            LabeledContent("WhatsApp", value: whatsapp)
+                        }
+                        if let locality = item.requestedLocality {
+                            LabeledContent("Locality", value: locality)
+                        }
+                        if let unit = item.requestedUnitType {
+                            LabeledContent("Unit type", value: unit)
+                        }
+                        if let budget = item.budget {
+                            LabeledContent("Budget", value: "\(budget)")
+                        }
+                        if let message = item.message, !message.isEmpty {
+                            Text(message)
+                        }
+                        LabeledContent("Source", value: item.source)
+                        LabeledContent("Status", value: item.status)
+                        if let name = item.assignedEmployeeName {
+                            LabeledContent("Assigned", value: name)
+                        }
+                    }
+
+                    if canStaffAct {
+                        Section("Actions") {
+                            Button("Update status") { showStatus = true }
+                            Button("Assign employee") { showAssign = true }
+                        }
+                    }
+
+                    if let errorMessage {
+                        Section { Text(errorMessage).foregroundStyle(NriTheme.terracotta) }
+                    }
+                }
+            }
+        }
+        .navigationTitle("Enquiry")
+        .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showAssign) {
+            AssignEmployeeSheet(title: "Assign enquiry") { employeeId in
+                item = try await appState.api.assignEnquiry(id: enquiryId, employeeUserId: employeeId)
+            }
+        }
+        .sheet(isPresented: $showStatus) {
+            UpdateEnquiryStatusSheet(current: item?.status ?? "NEW") { status in
+                item = try await appState.api.updateEnquiryStatus(id: enquiryId, status: status)
+            }
+        }
+        .task { await load() }
+        .refreshable { await load() }
+    }
+
+    private func load() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+        do {
+            item = try await appState.api.enquiry(id: enquiryId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct UpdateEnquiryStatusSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let current: String
+    var onSave: (String) async throws -> Void
+
+    @State private var status: EnquiryStatusOption
+    @State private var errorMessage: String?
+    @State private var isSaving = false
+
+    init(current: String, onSave: @escaping (String) async throws -> Void) {
+        self.current = current
+        self.onSave = onSave
+        _status = State(initialValue: EnquiryStatusOption(rawValue: current) ?? .NEW)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("Status", selection: $status) {
+                        ForEach(EnquiryStatusOption.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                }
+                if let errorMessage {
+                    Section { Text(errorMessage).foregroundStyle(NriTheme.terracotta) }
+                }
+            }
+            .navigationTitle("Update status")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { Task { await save() } }
+                        .disabled(isSaving)
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+        do {
+            try await onSave(status.rawValue)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
     }
 }

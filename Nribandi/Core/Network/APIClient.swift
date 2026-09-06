@@ -259,6 +259,337 @@ final class APIClient {
         )
     }
 
+    // MARK: - Blocks / Floors / Units
+
+    func blocks(propertyId: UUID) async throws -> [BlockItem] {
+        try await send(
+            method: "GET",
+            path: "/api/v1/properties/\(propertyId.uuidString.lowercased())/blocks",
+            body: Optional<String>.none,
+            authorized: true,
+            as: [BlockItem].self
+        )
+    }
+
+    func createBlock(propertyId: UUID, _ body: CreateBlockBody) async throws -> BlockItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/properties/\(propertyId.uuidString.lowercased())/blocks",
+            body: body,
+            authorized: true,
+            as: BlockItem.self
+        )
+    }
+
+    func floors(propertyId: UUID) async throws -> [FloorItem] {
+        try await send(
+            method: "GET",
+            path: "/api/v1/properties/\(propertyId.uuidString.lowercased())/floors",
+            body: Optional<String>.none,
+            authorized: true,
+            as: [FloorItem].self
+        )
+    }
+
+    func createFloor(propertyId: UUID, _ body: CreateFloorBody) async throws -> FloorItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/properties/\(propertyId.uuidString.lowercased())/floors",
+            body: body,
+            authorized: true,
+            as: FloorItem.self
+        )
+    }
+
+    func createUnit(propertyId: UUID, _ body: CreateUnitBody) async throws -> UnitItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/properties/\(propertyId.uuidString.lowercased())/units",
+            body: body,
+            authorized: true,
+            as: UnitItem.self
+        )
+    }
+
+    func updateUnitStatus(unitId: UUID, _ body: UpdateUnitStatusBody) async throws -> UnitItem {
+        try await send(
+            method: "PATCH",
+            path: "/api/v1/units/\(unitId.uuidString.lowercased())/status",
+            body: body,
+            authorized: true,
+            as: UnitItem.self
+        )
+    }
+
+    // MARK: - Tenancies
+
+    func tenancies(unitId: UUID) async throws -> [TenancyItem] {
+        try await send(
+            method: "GET",
+            path: "/api/v1/units/\(unitId.uuidString.lowercased())/tenancies",
+            body: Optional<String>.none,
+            authorized: true,
+            as: [TenancyItem].self
+        )
+    }
+
+    func createTenancy(unitId: UUID, _ body: CreateTenancyBody) async throws -> TenancyItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/units/\(unitId.uuidString.lowercased())/tenancies",
+            body: body,
+            authorized: true,
+            as: TenancyItem.self
+        )
+    }
+
+    func endTenancy(id: UUID, _ body: EndTenancyBody) async throws -> TenancyItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/tenancies/\(id.uuidString.lowercased())/end",
+            body: body,
+            authorized: true,
+            as: TenancyItem.self
+        )
+    }
+
+    // MARK: - Service request staff actions
+
+    func assignServiceRequest(id: UUID, employeeUserId: UUID) async throws -> ServiceRequestItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/service-requests/\(id.uuidString.lowercased())/assign",
+            body: AssignEmployeeBody(employeeUserId: employeeUserId),
+            authorized: true,
+            as: ServiceRequestItem.self
+        )
+    }
+
+    func updateServiceRequestStatus(id: UUID, _ body: UpdateServiceRequestStatusBody) async throws -> ServiceRequestItem {
+        try await send(
+            method: "PATCH",
+            path: "/api/v1/service-requests/\(id.uuidString.lowercased())/status",
+            body: body,
+            authorized: true,
+            as: ServiceRequestItem.self
+        )
+    }
+
+    // MARK: - Enquiries
+
+    func enquiry(id: UUID) async throws -> EnquiryItem {
+        try await send(
+            method: "GET",
+            path: "/api/v1/enquiries/\(id.uuidString.lowercased())",
+            body: Optional<String>.none,
+            authorized: true,
+            as: EnquiryItem.self
+        )
+    }
+
+    func assignEnquiry(id: UUID, employeeUserId: UUID) async throws -> EnquiryItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/enquiries/\(id.uuidString.lowercased())/assign",
+            body: AssignEmployeeBody(employeeUserId: employeeUserId),
+            authorized: true,
+            as: EnquiryItem.self
+        )
+    }
+
+    func updateEnquiryStatus(id: UUID, status: String) async throws -> EnquiryItem {
+        try await send(
+            method: "PATCH",
+            path: "/api/v1/enquiries/\(id.uuidString.lowercased())/status",
+            body: UpdateEnquiryStatusBody(status: status),
+            authorized: true,
+            as: EnquiryItem.self
+        )
+    }
+
+    // MARK: - Inspections
+
+    func createInspection(_ body: CreateInspectionBody) async throws -> InspectionItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/inspections",
+            body: body,
+            authorized: true,
+            as: InspectionItem.self
+        )
+    }
+
+    func updateInspectionStatus(id: UUID, status: String) async throws -> InspectionItem {
+        try await send(
+            method: "PATCH",
+            path: "/api/v1/inspections/\(id.uuidString.lowercased())/status",
+            body: UpdateInspectionStatusBody(status: status),
+            authorized: true,
+            as: InspectionItem.self
+        )
+    }
+
+    // MARK: - Invoices
+
+    func invoices(page: Int = 0, size: Int = 50) async throws -> PageResponse<InvoiceItem> {
+        try await send(
+            method: "GET",
+            path: "/api/v1/invoices?page=\(page)&size=\(size)",
+            body: Optional<String>.none,
+            authorized: true,
+            as: PageResponse<InvoiceItem>.self
+        )
+    }
+
+    func createInvoice(_ body: CreateInvoiceBody) async throws -> InvoiceItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/invoices",
+            body: body,
+            authorized: true,
+            as: InvoiceItem.self
+        )
+    }
+
+    func submitInvoice(id: UUID) async throws -> InvoiceItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/invoices/\(id.uuidString.lowercased())/submit",
+            body: Optional<String>.none,
+            authorized: true,
+            as: InvoiceItem.self
+        )
+    }
+
+    func approveInvoice(id: UUID) async throws -> InvoiceItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/invoices/\(id.uuidString.lowercased())/approve",
+            body: Optional<String>.none,
+            authorized: true,
+            as: InvoiceItem.self
+        )
+    }
+
+    func rejectInvoice(id: UUID) async throws -> InvoiceItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/invoices/\(id.uuidString.lowercased())/reject",
+            body: Optional<String>.none,
+            authorized: true,
+            as: InvoiceItem.self
+        )
+    }
+
+    func markInvoicePaid(id: UUID) async throws -> InvoiceItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/invoices/\(id.uuidString.lowercased())/mark-paid",
+            body: Optional<String>.none,
+            authorized: true,
+            as: InvoiceItem.self
+        )
+    }
+
+    // MARK: - KYC / tenant verification
+
+    func tenantVerification(tenantUserId: UUID) async throws -> TenantVerificationItem {
+        try await send(
+            method: "GET",
+            path: "/api/v1/tenants/\(tenantUserId.uuidString.lowercased())/verification",
+            body: Optional<String>.none,
+            authorized: true,
+            as: TenantVerificationItem.self
+        )
+    }
+
+    func upsertTenantVerification(tenantUserId: UUID, _ body: UpsertTenantVerificationBody) async throws -> TenantVerificationItem {
+        try await send(
+            method: "PUT",
+            path: "/api/v1/tenants/\(tenantUserId.uuidString.lowercased())/verification",
+            body: body,
+            authorized: true,
+            as: TenantVerificationItem.self
+        )
+    }
+
+    func submitTenantVerification(tenantUserId: UUID) async throws -> TenantVerificationItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/tenants/\(tenantUserId.uuidString.lowercased())/verification/submit",
+            body: Optional<String>.none,
+            authorized: true,
+            as: TenantVerificationItem.self
+        )
+    }
+
+    func reviewTenantVerification(tenantUserId: UUID, _ body: ReviewTenantVerificationBody) async throws -> TenantVerificationItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/tenants/\(tenantUserId.uuidString.lowercased())/verification/review",
+            body: body,
+            authorized: true,
+            as: TenantVerificationItem.self
+        )
+    }
+
+    /// Document upload (multipart). Follow-up: wire PhotosPicker/file picker in KYC UI when needed.
+    func uploadTenantVerificationDocument(
+        tenantUserId: UUID,
+        documentType: String,
+        fileData: Data,
+        fileName: String,
+        mimeType: String
+    ) async throws -> TenantVerificationItem {
+        let path = "/api/v1/tenants/\(tenantUserId.uuidString.lowercased())/verification/documents?documentType=\(documentType)"
+        guard let url = URL(string: path, relativeTo: environment.apiBaseURL)?.absoluteURL else {
+            throw APIError.invalidURL
+        }
+        let boundary = "Boundary-\(UUID().uuidString)"
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        guard let token = sessionStore?.accessToken, !token.isEmpty else {
+            throw APIError.unauthorized
+        }
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n".data(using: .utf8)!)
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
+        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
+        body.append(fileData)
+        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        request.httpBody = body
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await urlSession.data(for: request)
+        } catch {
+            throw APIError.transport(Self.friendlyTransport(error, baseURL: environment.apiBaseURL))
+        }
+        guard let http = response as? HTTPURLResponse else {
+            throw APIError.transport("Unexpected response from server.")
+        }
+        guard (200..<300).contains(http.statusCode) else {
+            if let err = try? JSONDecoder().decode(ApiErrorResponse.self, from: data) {
+                throw APIError.http(status: http.statusCode, code: err.errorCode, message: err.message ?? "Upload failed.")
+            }
+            throw APIError.http(status: http.statusCode, code: nil, message: "Upload failed (\(http.statusCode)).")
+        }
+        do {
+            let envelope = try JSONDecoder().decode(ApiResponse<TenantVerificationItem>.self, from: data)
+            if let value = envelope.data { return value }
+            throw APIError.emptyData
+        } catch let api as APIError {
+            throw api
+        } catch {
+            return try JSONDecoder().decode(TenantVerificationItem.self, from: data)
+        }
+    }
+
     private func send<Body: Encodable, Response: Decodable>(
         method: String,
         path: String,
