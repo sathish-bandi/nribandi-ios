@@ -1,0 +1,42 @@
+import SwiftUI
+
+struct ProfileView: View {
+    @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var session: SessionStore
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if let user = session.user {
+                    Section("Signed in") {
+                        LabeledContent("Name", value: user.fullName)
+                        LabeledContent("Email", value: user.email)
+                        LabeledContent("Role", value: user.role.title)
+                        if let phone = user.phone { LabeledContent("Phone", value: phone) }
+                    }
+                }
+                Section("API environment") {
+                    Picker("Environment", selection: Binding(
+                        get: { appState.environment },
+                        set: { newValue in Task { await appState.switchEnvironment(newValue) } }
+                    )) {
+                        ForEach(AppEnvironment.allCases) { env in
+                            Text(env.displayName).tag(env)
+                        }
+                    }
+                    LabeledContent("Backend profile", value: appState.environment.backendProfile)
+                    Text(appState.environment.apiBaseURL.absoluteString)
+                        .font(.caption.monospaced())
+                        .foregroundStyle(NriTheme.slate)
+                }
+                Section {
+                    Button("Sign out", role: .destructive) {
+                        Task { await session.logout() }
+                    }
+                }
+            }
+            .navigationTitle("Profile")
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { EnvBadge(env: appState.environment) } }
+        }
+    }
+}

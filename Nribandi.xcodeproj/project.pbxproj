@@ -1,0 +1,431 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0E779D860ED8487D8CF25298 /* AppState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3EDE403912B3425C9CFA2D02 /* AppState.swift */; };
+		380ACE4C01B940419B862B56 /* NribandiApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 27E2D91A9AF040448E5543F2 /* NribandiApp.swift */; };
+		38ABAC7F63B74A10B1B8013C /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58819165AB674718837440D6 /* RootView.swift */; };
+		BE8DB3109ECC4669B0C270A5 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26AE98724D034D24B93AD0D1 /* AppEnvironment.swift */; };
+		D0AEECA65CA44EEBAD4F4F9A /* KeychainStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC060563C34D45C8B1D4A171 /* KeychainStore.swift */; };
+		4DEE8A378EA546E79A255F9F /* SessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 47ED6D12C43F47FA830762F6 /* SessionStore.swift */; };
+		66196F8A830E48C8889CDF04 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2EACDC6BCC04BE6B53D5D54 /* Models.swift */; };
+		D17E332662B749F1A9E10FFE /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 812A3F82F6E7428380DE7864 /* APIClient.swift */; };
+		C43054DA31CE47F98CB43DC0 /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FF9341AD416432AA5700476 /* APIError.swift */; };
+		699670E0EDF14523A94078A7 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84CAEF9BA0F74626A90E85D8 /* Theme.swift */; };
+		6B3F4B7147DD48FB9A81DE43 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D76C4F6C3FB642E29175BD31 /* DashboardView.swift */; };
+		8A3475DCE53A4476AF2CEDBF /* EnquiriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3DF148C664C46C49E356813 /* EnquiriesView.swift */; };
+		F0C2BAB542C44BF491312234 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9079F47FA634BA6B5F5F138 /* MainTabView.swift */; };
+		C4433386C3EA4094A25FF8BF /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B76A11F2C7E24D64AEB06153 /* LoginView.swift */; };
+		DBC8FC4CD9F147C3B585AB05 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0360B81BE9C54F4CB5C24739 /* ProfileView.swift */; };
+		9EC8B80D835D480DAF0410FE /* PropertiesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7102416AF23046FFA532FAD1 /* PropertiesView.swift */; };
+		4AFC64286B0B40DDB09FF7B7 /* PropertyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B0A84FF396244BD5B8A52565 /* PropertyDetailView.swift */; };
+		C41B1E3B5F4745E2827B4393 /* ServiceRequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB13033F03824279A94FFE54 /* ServiceRequestsView.swift */; };
+		B21F5CEF2D644DB0BE72ABA9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F6AE81627DF34935B1B5D2BC /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1B5C489D522F4CAEA305A100 /* Nribandi.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Nribandi.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		3EDE403912B3425C9CFA2D02 /* AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppState.swift; sourceTree = "<group>"; };
+		27E2D91A9AF040448E5543F2 /* NribandiApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NribandiApp.swift; sourceTree = "<group>"; };
+		58819165AB674718837440D6 /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		26AE98724D034D24B93AD0D1 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		AC060563C34D45C8B1D4A171 /* KeychainStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainStore.swift; sourceTree = "<group>"; };
+		47ED6D12C43F47FA830762F6 /* SessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStore.swift; sourceTree = "<group>"; };
+		B2EACDC6BCC04BE6B53D5D54 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		812A3F82F6E7428380DE7864 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		3FF9341AD416432AA5700476 /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
+		84CAEF9BA0F74626A90E85D8 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		D76C4F6C3FB642E29175BD31 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		F3DF148C664C46C49E356813 /* EnquiriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EnquiriesView.swift; sourceTree = "<group>"; };
+		E9079F47FA634BA6B5F5F138 /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		B76A11F2C7E24D64AEB06153 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		0360B81BE9C54F4CB5C24739 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		7102416AF23046FFA532FAD1 /* PropertiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PropertiesView.swift; sourceTree = "<group>"; };
+		B0A84FF396244BD5B8A52565 /* PropertyDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PropertyDetailView.swift; sourceTree = "<group>"; };
+		EB13033F03824279A94FFE54 /* ServiceRequestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceRequestsView.swift; sourceTree = "<group>"; };
+		9CFA40D0A83A489F9C592FE7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F6AE81627DF34935B1B5D2BC /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0F5542806CC04B58B9BF3E32 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		93C1A5389EA94E2E83547B15 = {
+			isa = PBXGroup;
+			children = (
+				EC8F5708F3E2469CAFA5C279 /* Nribandi */,
+				569650A5560440DD826BE4AE /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		569650A5560440DD826BE4AE /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				1B5C489D522F4CAEA305A100 /* Nribandi.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		EC8F5708F3E2469CAFA5C279 /* Nribandi */ = {
+			isa = PBXGroup;
+			children = (
+				9D6B154484E549A886E4C034 /* App */,
+				A883C63F12BB4D36981D4B5D /* Config */,
+				D725CE92FF0043D98143AA90 /* Core */,
+				0C56C872B4FF484C89EAD970 /* Design */,
+				114123DDBAE0419789033667 /* Features */,
+				235DCD3E934F4007AA84D544 /* Resources */,
+			);
+			path = Nribandi;
+			sourceTree = "<group>";
+		};
+		9D6B154484E549A886E4C034 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				3EDE403912B3425C9CFA2D02 /* AppState.swift */,
+				27E2D91A9AF040448E5543F2 /* NribandiApp.swift */,
+				58819165AB674718837440D6 /* RootView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		A883C63F12BB4D36981D4B5D /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				26AE98724D034D24B93AD0D1 /* AppEnvironment.swift */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		0C56C872B4FF484C89EAD970 /* Design */ = {
+			isa = PBXGroup;
+			children = (
+				84CAEF9BA0F74626A90E85D8 /* Theme.swift */,
+			);
+			path = Design;
+			sourceTree = "<group>";
+		};
+		235DCD3E934F4007AA84D544 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				9CFA40D0A83A489F9C592FE7 /* Info.plist */,
+				F6AE81627DF34935B1B5D2BC /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		D725CE92FF0043D98143AA90 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				757E1DEB87724AECB686B411 /* Auth */,
+				D08C52F89094449B82A1D971 /* Models */,
+				86A2462A606E4C928470A035 /* Network */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		757E1DEB87724AECB686B411 /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				AC060563C34D45C8B1D4A171 /* KeychainStore.swift */,
+				47ED6D12C43F47FA830762F6 /* SessionStore.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		D08C52F89094449B82A1D971 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				B2EACDC6BCC04BE6B53D5D54 /* Models.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		86A2462A606E4C928470A035 /* Network */ = {
+			isa = PBXGroup;
+			children = (
+				812A3F82F6E7428380DE7864 /* APIClient.swift */,
+				3FF9341AD416432AA5700476 /* APIError.swift */,
+			);
+			path = Network;
+			sourceTree = "<group>";
+		};
+		114123DDBAE0419789033667 /* Features */ = {
+			isa = PBXGroup;
+			children = (
+				4A1134084F254465A984658A /* Login */,
+				540896F0574D485DA37A75D2 /* Home */,
+				A564B0CE06C346888FC0122C /* Dashboard */,
+				637CDB1F148D458A9FA4B908 /* Properties */,
+				6606730B42194A8CB6554FFC /* ServiceRequests */,
+				A1A9E127CC004881960CB963 /* Enquiries */,
+				CCBBE0CCB04D4143BEED6A30 /* Profile */,
+			);
+			path = Features;
+			sourceTree = "<group>";
+		};
+		4A1134084F254465A984658A /* Login */ = {
+			isa = PBXGroup;
+			children = (
+				B76A11F2C7E24D64AEB06153 /* LoginView.swift */,
+			);
+			path = Login;
+			sourceTree = "<group>";
+		};
+		540896F0574D485DA37A75D2 /* Home */ = {
+			isa = PBXGroup;
+			children = (
+				E9079F47FA634BA6B5F5F138 /* MainTabView.swift */,
+			);
+			path = Home;
+			sourceTree = "<group>";
+		};
+		A564B0CE06C346888FC0122C /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				D76C4F6C3FB642E29175BD31 /* DashboardView.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		637CDB1F148D458A9FA4B908 /* Properties */ = {
+			isa = PBXGroup;
+			children = (
+				7102416AF23046FFA532FAD1 /* PropertiesView.swift */,
+				B0A84FF396244BD5B8A52565 /* PropertyDetailView.swift */,
+			);
+			path = Properties;
+			sourceTree = "<group>";
+		};
+		6606730B42194A8CB6554FFC /* ServiceRequests */ = {
+			isa = PBXGroup;
+			children = (
+				EB13033F03824279A94FFE54 /* ServiceRequestsView.swift */,
+			);
+			path = ServiceRequests;
+			sourceTree = "<group>";
+		};
+		A1A9E127CC004881960CB963 /* Enquiries */ = {
+			isa = PBXGroup;
+			children = (
+				F3DF148C664C46C49E356813 /* EnquiriesView.swift */,
+			);
+			path = Enquiries;
+			sourceTree = "<group>";
+		};
+		CCBBE0CCB04D4143BEED6A30 /* Profile */ = {
+			isa = PBXGroup;
+			children = (
+				0360B81BE9C54F4CB5C24739 /* ProfileView.swift */,
+			);
+			path = Profile;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		3FCC677DE6664F839F9A048A /* Nribandi */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 680B07C9B5A64278AAE41752 /* Build configuration list for PBXNativeTarget "Nribandi" */;
+			buildPhases = (
+				4314906E98574D8FBC2EF94E /* Sources */,
+				0F5542806CC04B58B9BF3E32 /* Frameworks */,
+				CB8A6B7CCC4A4C23BBE28F91 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Nribandi;
+			productName = Nribandi;
+			productReference = 1B5C489D522F4CAEA305A100 /* Nribandi.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		27D7268B485845ABBFA73F97 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+			};
+			buildConfigurationList = 10DDAD5DD4054A9A8552CCF6 /* Build configuration list for PBXProject "Nribandi" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 93C1A5389EA94E2E83547B15;
+			productRefGroup = 569650A5560440DD826BE4AE /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3FCC677DE6664F839F9A048A /* Nribandi */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		CB8A6B7CCC4A4C23BBE28F91 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B21F5CEF2D644DB0BE72ABA9 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		4314906E98574D8FBC2EF94E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0E779D860ED8487D8CF25298 /* AppState.swift in Sources */,
+				380ACE4C01B940419B862B56 /* NribandiApp.swift in Sources */,
+				38ABAC7F63B74A10B1B8013C /* RootView.swift in Sources */,
+				BE8DB3109ECC4669B0C270A5 /* AppEnvironment.swift in Sources */,
+				D0AEECA65CA44EEBAD4F4F9A /* KeychainStore.swift in Sources */,
+				4DEE8A378EA546E79A255F9F /* SessionStore.swift in Sources */,
+				66196F8A830E48C8889CDF04 /* Models.swift in Sources */,
+				D17E332662B749F1A9E10FFE /* APIClient.swift in Sources */,
+				C43054DA31CE47F98CB43DC0 /* APIError.swift in Sources */,
+				699670E0EDF14523A94078A7 /* Theme.swift in Sources */,
+				6B3F4B7147DD48FB9A81DE43 /* DashboardView.swift in Sources */,
+				8A3475DCE53A4476AF2CEDBF /* EnquiriesView.swift in Sources */,
+				F0C2BAB542C44BF491312234 /* MainTabView.swift in Sources */,
+				C4433386C3EA4094A25FF8BF /* LoginView.swift in Sources */,
+				DBC8FC4CD9F147C3B585AB05 /* ProfileView.swift in Sources */,
+				9EC8B80D835D480DAF0410FE /* PropertiesView.swift in Sources */,
+				4AFC64286B0B40DDB09FF7B7 /* PropertyDetailView.swift in Sources */,
+				C41B1E3B5F4745E2827B4393 /* ServiceRequestsView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		B84E3B088E974494AB8F0AF2 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SDKROOT = iphoneos;
+			};
+			name = Debug;
+		};
+		FB7054AA68DB4738AA43FD4D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_DYNAMIC_NO_PIC = NO;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SDKROOT = iphoneos;
+			};
+			name = Release;
+		};
+		18621B3A9533478FACDF88B3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Nribandi/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nribandi.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		695962A3008442CFAD6AACBC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Nribandi/Resources/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.nribandi.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		10DDAD5DD4054A9A8552CCF6 /* Build configuration list for PBXProject "Nribandi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				B84E3B088E974494AB8F0AF2 /* Debug */,
+				FB7054AA68DB4738AA43FD4D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		680B07C9B5A64278AAE41752 /* Build configuration list for PBXNativeTarget "Nribandi" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				18621B3A9533478FACDF88B3 /* Debug */,
+				695962A3008442CFAD6AACBC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 27D7268B485845ABBFA73F97 /* Project object */;
+}
