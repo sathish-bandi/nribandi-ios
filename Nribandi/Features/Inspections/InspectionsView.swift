@@ -302,7 +302,7 @@ struct CreateInspectionView: View {
             async let props = appState.api.properties(size: 100).content
             async let emps = appState.api.users(role: "EMPLOYEE", size: 100).content
             properties = try await props
-            employees = try await emps.filter(\.active)
+            employees = try await emps.filter { $0.active }
             selectedPropertyId = properties.first?.id
             selectedEmployeeId = employees.first?.id
             await loadUnits(for: selectedPropertyId)
@@ -343,17 +343,6 @@ struct CreateInspectionView: View {
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
-        }
-    }
-}
-
-struct OpsOptionalNavigationStack: ViewModifier {
-    let enabled: Bool
-    func body(content: Content) -> some View {
-        if enabled {
-            NavigationStack { content }
-        } else {
-            content
         }
     }
 }

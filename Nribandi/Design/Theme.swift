@@ -84,3 +84,15 @@ struct StatusChip: View {
             .background(NriTheme.sand, in: Capsule())
     }
 }
+
+/// Wraps content in `NavigationStack` only when the view is shown outside a parent stack (e.g. Ops hub).
+struct OpsOptionalNavigationStack: ViewModifier {
+    let enabled: Bool
+    func body(content: Content) -> some View {
+        if enabled {
+            NavigationStack { content }
+        } else {
+            content
+        }
+    }
+}

@@ -40,7 +40,7 @@ struct InvoicesView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(item.invoiceNumber ?? "Draft invoice").font(.headline)
                             if let total = item.totalAmount {
-                                Text("Total \(NriFormat.decimal(total))").font(.subheadline).foregroundStyle(NriTheme.slate)
+                                Text(verbatim: "Total \(NriFormat.decimal(total))").font(.subheadline).foregroundStyle(NriTheme.slate)
                             }
                             HStack {
                                 StatusChip(text: item.status)
@@ -75,6 +75,7 @@ struct InvoicesView: View {
                 showCreate = false
                 await load()
             }
+            .environmentObject(appState)
         }
         .task { await load() }
         .modifier(OpsOptionalNavigationStack(enabled: !embedsInParentNavigation))
@@ -129,7 +130,7 @@ struct InvoiceDetailView: View {
                     ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                         VStack(alignment: .leading, spacing: 2) {
                             Text(line.itemDescription).font(.subheadline.weight(.semibold))
-                            Text("Qty \(NriFormat.decimal(line.quantity)) × \(NriFormat.decimal(line.unitPrice))")
+                            Text(verbatim: "Qty \(NriFormat.decimal(line.quantity)) × \(NriFormat.decimal(line.unitPrice))")
                                 .font(.footnote)
                                 .foregroundStyle(NriTheme.slate)
                         }
@@ -191,7 +192,7 @@ struct CreateInvoiceView: View {
     @State private var lineDescription = ""
     @State private var lineQuantityText = "1"
     @State private var lineUnitPriceText = ""
-    @State private var lines: [CreateInvoiceLineBody] = []
+    @State private var lines: [DraftInvoiceLine] = []
     @State private var errorMessage: String?
     @State private var isSaving = false
     @State private var isBootstrapping = true
@@ -242,7 +243,7 @@ struct CreateInvoiceView: View {
                                 HStack {
                                     VStack(alignment: .leading) {
                                         Text(line.itemDescription)
-                                        Text("\(NriFormat.decimal(line.quantity)) × \(NriFormat.decimal(line.unitPrice))")
+                                        Text(verbatim: "\(NriFormat.decimal(line.quantity)) × \(NriFormat.decimal(line.unitPrice))")
                                             .font(.caption)
                                             .foregroundStyle(NriTheme.slate)
                                     }
@@ -286,7 +287,7 @@ struct CreateInvoiceView: View {
               let unitPrice = Decimal(string: lineUnitPriceText)
         else { return }
         lines.append(
-            CreateInvoiceLineBody(
+            DraftInvoiceLine(
                 itemDescription: lineDescription.trimmingCharacters(in: .whitespacesAndNewlines),
                 quantity: quantity,
                 unitPrice: unitPrice
@@ -326,7 +327,7 @@ struct CreateInvoiceView: View {
                     invoiceDate: Self.dayFormatter.string(from: invoiceDate),
                     tax: tax,
                     discount: discount,
-                    items: lines
+                    items: lines.map { $0.asBody }
                 )
             )
             await onCreated()

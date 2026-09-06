@@ -58,6 +58,8 @@ struct PropertiesView: View {
             }
             .sheet(isPresented: $showCreate) {
                 PropertyFormView(mode: .create) { _ in await load() }
+                    .environmentObject(appState)
+                    .environmentObject(session)
             }
             .task { await load() }
         }

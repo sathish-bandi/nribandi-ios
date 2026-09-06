@@ -352,14 +352,14 @@ struct UpdatePropertyBody: Encodable {
     var propertyPurpose: String?
 }
 
-enum PropertyTypeOption: String, CaseIterable, Identifiable {
+enum PropertyTypeOption: String, CaseIterable, Identifiable, Hashable {
     case APARTMENT, INDEPENDENT_HOUSE, VILLA, HIGH_RISE, MULTI_STOREY
     var id: String { rawValue }
     var title: String { rawValue.replacingOccurrences(of: "_", with: " ").capitalized }
     var usesBlocks: Bool { self == .APARTMENT || self == .HIGH_RISE || self == .MULTI_STOREY }
 }
 
-enum PropertyPurposeOption: String, CaseIterable, Identifiable {
+enum PropertyPurposeOption: String, CaseIterable, Identifiable, Hashable {
     case RESIDENTIAL, COMMERCIAL
     var id: String { rawValue }
     var title: String { rawValue.capitalized }
@@ -475,7 +475,7 @@ struct UpdateInspectionStatusBody: Encodable {
     let status: String
 }
 
-struct InvoiceLineItem: Codable, Identifiable, Hashable {
+struct InvoiceLineItem: Codable, Hashable {
     var id: UUID? = nil
     /// Display/API line text. Named to avoid clashing with `CustomStringConvertible.description`.
     let itemDescription: String
@@ -489,14 +489,6 @@ struct InvoiceLineItem: Codable, Identifiable, Hashable {
         case quantity
         case unitPrice
         case lineTotal
-    }
-
-    init(id: UUID? = nil, itemDescription: String, quantity: Decimal, unitPrice: Decimal, lineTotal: Decimal? = nil) {
-        self.id = id
-        self.itemDescription = itemDescription
-        self.quantity = quantity
-        self.unitPrice = unitPrice
-        self.lineTotal = lineTotal
     }
 }
 
@@ -514,8 +506,8 @@ struct InvoiceItem: Decodable, Identifiable, Hashable {
     let updatedAt: String?
 }
 
-struct CreateInvoiceLineBody: Encodable, Identifiable, Hashable {
-    var id: UUID = UUID()
+/// API body for one invoice line. UI draft rows use `DraftInvoiceLine` (Identifiable) instead.
+struct CreateInvoiceLineBody: Encodable, Hashable {
     /// Line text sent to the API as `description`.
     let itemDescription: String
     let quantity: Decimal
@@ -525,6 +517,29 @@ struct CreateInvoiceLineBody: Encodable, Identifiable, Hashable {
         case itemDescription = "description"
         case quantity
         case unitPrice
+    }
+}
+
+/// Local draft row for the create-invoice form (stable `id` is not sent to the API).
+struct DraftInvoiceLine: Identifiable, Hashable {
+    let id: UUID
+    let itemDescription: String
+    let quantity: Decimal
+    let unitPrice: Decimal
+
+    init(id: UUID = UUID(), itemDescription: String, quantity: Decimal, unitPrice: Decimal) {
+        self.id = id
+        self.itemDescription = itemDescription
+        self.quantity = quantity
+        self.unitPrice = unitPrice
+    }
+
+    var asBody: CreateInvoiceLineBody {
+        CreateInvoiceLineBody(
+            itemDescription: itemDescription,
+            quantity: quantity,
+            unitPrice: unitPrice
+        )
     }
 }
 

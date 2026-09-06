@@ -40,7 +40,7 @@ struct PropertyFormView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Property") {
+                Section {
                     TextField("Name", text: $name)
                     TextField("Address", text: $address, axis: .vertical)
                         .lineLimit(2...4)
@@ -49,7 +49,9 @@ struct PropertyFormView: View {
                     TextField("State", text: $state)
                     TextField("Pincode", text: $pincode)
                         .keyboardType(.numberPad)
-                    Stepper("Floors: \(numberOfFloors)", value: $numberOfFloors, in: 1...200)
+                    Stepper(value: $numberOfFloors, in: 1...200) {
+                        Text("Floors: \(numberOfFloors)")
+                    }
                     Picker("Type", selection: $propertyType) {
                         ForEach(PropertyTypeOption.allCases) { option in
                             Text(option.title).tag(option)
@@ -60,6 +62,8 @@ struct PropertyFormView: View {
                             Text(option.title).tag(option)
                         }
                     }
+                } header: {
+                    Text("Property")
                 } footer: {
                     Text("After saving, add blocks (if apartment/high-rise), floors, then units with 1/2/3 BHK layouts.")
                 }
@@ -151,7 +155,7 @@ struct PropertyFormView: View {
         isLoadingOwners = true
         defer { isLoadingOwners = false }
         do {
-            owners = try await appState.api.users(role: "OWNER", size: 100).content.filter(\.active)
+            owners = try await appState.api.users(role: "OWNER", size: 100).content.filter { $0.active }
             if selectedOwnerId == nil {
                 selectedOwnerId = owners.first?.id
             }

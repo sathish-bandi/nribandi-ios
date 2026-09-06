@@ -124,6 +124,8 @@ struct PropertyDetailView: View {
             PropertyFormView(mode: .edit(property)) { updated in
                 property = updated
             }
+            .environmentObject(appState)
+            .environmentObject(session)
         }
         .sheet(isPresented: $showAddBlock) {
             AddBlockSheet(propertyId: property.id) {
@@ -252,7 +254,9 @@ private struct AddFloorSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Stepper("Floor number: \(floorNumber)", value: $floorNumber, in: 0...200)
+                    Stepper(value: $floorNumber, in: 0...200) {
+                        Text("Floor number: \(floorNumber)")
+                    }
                     TextField("Name (optional)", text: $name)
                     if requiresBlock {
                         if blocks.isEmpty {

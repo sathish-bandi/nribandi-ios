@@ -205,7 +205,7 @@ private struct AssignTenancySheet: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            tenants = try await appState.api.users(role: "TENANT", size: 100).content.filter(\.active)
+            tenants = try await appState.api.users(role: "TENANT", size: 100).content.filter { $0.active }
             if selectedTenantId == nil {
                 selectedTenantId = tenants.first?.id
             }

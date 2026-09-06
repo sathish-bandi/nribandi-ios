@@ -217,7 +217,7 @@ struct CreateServiceRequestView: View {
         defer { isBootstrapping = false }
         do {
             if isTenant {
-                tenancies = try await appState.api.myTenancies().filter(\.active)
+                tenancies = try await appState.api.myTenancies().filter { $0.active }
                 selectedTenancyId = tenancies.first?.id
             } else {
                 properties = try await appState.api.properties().content
@@ -510,7 +510,7 @@ struct AssignEmployeeSheet: View {
         isLoading = true
         defer { isLoading = false }
         do {
-            employees = try await appState.api.users(role: "EMPLOYEE", size: 100).content.filter(\.active)
+            employees = try await appState.api.users(role: "EMPLOYEE", size: 100).content.filter { $0.active }
             selectedEmployeeId = employees.first?.id
         } catch {
             errorMessage = error.localizedDescription
