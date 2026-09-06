@@ -139,6 +139,51 @@ struct ServiceRequestItem: Decodable, Identifiable, Hashable {
     let sourceInspectionId: UUID?
     let createdAt: String?
     let updatedAt: String?
+
+    var canCancel: Bool {
+        ["OPEN", "ASSIGNED", "IN_PROGRESS", "WAITING_FOR_PARTS"].contains(status)
+    }
+}
+
+struct CreateServiceRequestBody: Encodable {
+    let propertyId: UUID
+    let unitId: UUID?
+    let category: String
+    let title: String
+    let description: String
+    let priority: String
+}
+
+struct TenancyItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let propertyId: UUID
+    let propertyName: String?
+    let unitId: UUID
+    let unitNumber: String?
+    let tenantUserId: UUID
+    let tenantName: String?
+    let moveInDate: String?
+    let moveOutDate: String?
+    let active: Bool
+    let createdAt: String?
+    let updatedAt: String?
+
+    var label: String {
+        let unit = unitNumber.map { "Unit \($0)" } ?? "Unit"
+        let property = propertyName ?? "Property"
+        return "\(property) · \(unit)"
+    }
+}
+
+struct ServiceRequestHistoryItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let serviceRequestId: UUID
+    let oldStatus: String?
+    let newStatus: String
+    let changedByUserId: UUID
+    let changedByName: String?
+    let comments: String?
+    let timestamp: String?
 }
 
 struct EnquiryItem: Decodable, Identifiable, Hashable {

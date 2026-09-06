@@ -111,6 +111,56 @@ final class APIClient {
         )
     }
 
+    func serviceRequest(id: UUID) async throws -> ServiceRequestItem {
+        try await send(
+            method: "GET",
+            path: "/api/v1/service-requests/\(id.uuidString.lowercased())",
+            body: Optional<String>.none,
+            authorized: true,
+            as: ServiceRequestItem.self
+        )
+    }
+
+    func createServiceRequest(_ body: CreateServiceRequestBody) async throws -> ServiceRequestItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/service-requests",
+            body: body,
+            authorized: true,
+            as: ServiceRequestItem.self
+        )
+    }
+
+    func cancelServiceRequest(id: UUID) async throws -> ServiceRequestItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/service-requests/\(id.uuidString.lowercased())/cancel",
+            body: Optional<String>.none,
+            authorized: true,
+            as: ServiceRequestItem.self
+        )
+    }
+
+    func serviceRequestHistory(id: UUID) async throws -> [ServiceRequestHistoryItem] {
+        try await send(
+            method: "GET",
+            path: "/api/v1/service-requests/\(id.uuidString.lowercased())/history",
+            body: Optional<String>.none,
+            authorized: true,
+            as: [ServiceRequestHistoryItem].self
+        )
+    }
+
+    func myTenancies() async throws -> [TenancyItem] {
+        try await send(
+            method: "GET",
+            path: "/api/v1/tenancies/mine",
+            body: Optional<String>.none,
+            authorized: true,
+            as: [TenancyItem].self
+        )
+    }
+
     func enquiries(page: Int = 0, size: Int = 50) async throws -> PageResponse<EnquiryItem> {
         try await send(
             method: "GET",
