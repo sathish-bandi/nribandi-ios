@@ -18,8 +18,8 @@ struct MainTabView: View {
             ServiceRequestsView()
                 .tabItem { Label("Requests", systemImage: "wrench.and.screwdriver.fill") }
             if showsOpsTabs {
-                EnquiriesView()
-                    .tabItem { Label("Enquiries", systemImage: "bubble.left.and.bubble.right.fill") }
+                OpsHubView()
+                    .tabItem { Label("Ops", systemImage: "square.grid.2x2.fill") }
             }
             ProfileView()
                 .tabItem { Label("Profile", systemImage: "person.crop.circle") }

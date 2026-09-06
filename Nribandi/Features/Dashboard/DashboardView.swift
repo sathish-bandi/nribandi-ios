@@ -212,35 +212,47 @@ struct DashboardMetricDetailView: View {
                         }
                     case .pendingKyc:
                         ForEach(verifications) { item in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(item.tenantName ?? "Tenant").font(.headline)
-                                if !item.locationLine.isEmpty {
-                                    Text(item.locationLine).font(.subheadline).foregroundStyle(NriTheme.slate)
+                            NavigationLink {
+                                TenantVerificationView(
+                                    tenantUserId: item.tenantUserId,
+                                    tenantName: item.tenantName,
+                                    reviewMode: true
+                                )
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(item.tenantName ?? "Tenant").font(.headline)
+                                    if !item.locationLine.isEmpty {
+                                        Text(item.locationLine).font(.subheadline).foregroundStyle(NriTheme.slate)
+                                    }
+                                    if let address = item.permanentAddress, !address.isEmpty {
+                                        Text(address).font(.footnote).foregroundStyle(NriTheme.slate)
+                                    }
+                                    StatusChip(text: item.status)
                                 }
-                                if let address = item.permanentAddress, !address.isEmpty {
-                                    Text(address).font(.footnote).foregroundStyle(NriTheme.slate)
-                                }
-                                StatusChip(text: item.status)
+                                .padding(.vertical, 2)
                             }
-                            .padding(.vertical, 2)
                         }
                     case .upcomingInspections:
                         ForEach(inspections) { item in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(item.propertyName ?? "Property").font(.headline)
-                                if let unit = item.unitNumber {
-                                    Text("Unit \(unit)").font(.subheadline).foregroundStyle(NriTheme.slate)
+                            NavigationLink {
+                                InspectionDetailView(inspection: item) { await load() }
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(item.propertyName ?? "Property").font(.headline)
+                                    if let unit = item.unitNumber {
+                                        Text("Unit \(unit)").font(.subheadline).foregroundStyle(NriTheme.slate)
+                                    }
+                                    HStack {
+                                        StatusChip(text: item.inspectionType)
+                                        StatusChip(text: item.status)
+                                        if let date = item.inspectionDate { StatusChip(text: date) }
+                                    }
+                                    if let inspector = item.inspectorEmployeeName {
+                                        Text("Inspector: \(inspector)").font(.caption).foregroundStyle(NriTheme.slate)
+                                    }
                                 }
-                                HStack {
-                                    StatusChip(text: item.inspectionType)
-                                    StatusChip(text: item.status)
-                                    if let date = item.inspectionDate { StatusChip(text: date) }
-                                }
-                                if let inspector = item.inspectorEmployeeName {
-                                    Text("Inspector: \(inspector)").font(.caption).foregroundStyle(NriTheme.slate)
-                                }
+                                .padding(.vertical, 2)
                             }
-                            .padding(.vertical, 2)
                         }
                     }
                 }

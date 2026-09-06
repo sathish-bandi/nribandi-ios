@@ -312,3 +312,176 @@ enum PropertyPurposeOption: String, CaseIterable, Identifiable {
     var id: String { rawValue }
     var title: String { rawValue.capitalized }
 }
+
+struct BlockItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let propertyId: UUID
+    let blockNumber: String
+    let name: String?
+}
+
+struct FloorItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let propertyId: UUID
+    let blockId: UUID?
+    let blockNumber: String?
+    let floorNumber: Int
+    let name: String?
+}
+
+struct CreateBlockBody: Encodable {
+    let blockNumber: String
+    let name: String?
+}
+
+struct CreateFloorBody: Encodable {
+    let floorNumber: Int
+    let name: String?
+    let blockId: UUID?
+    let blockNumber: String?
+}
+
+enum UnitTypeOption: String, CaseIterable, Identifiable {
+    case ONE_BHK, TWO_BHK, THREE_BHK, FOUR_BHK, STUDIO, PENTHOUSE, VILLA, INDEPENDENT_HOUSE
+    var id: String { rawValue }
+    var title: String { rawValue.replacingOccurrences(of: "_", with: " ") }
+}
+
+struct CreateUnitBody: Encodable {
+    let floorId: UUID
+    let unitNumber: String
+    let unitType: String
+}
+
+struct UpdateUnitStatusBody: Encodable {
+    var occupancyStatus: String?
+    var toLetBoardStatus: String?
+}
+
+struct CreateTenancyBody: Encodable {
+    let tenantUserId: UUID
+    let moveInDate: String
+}
+
+struct EndTenancyBody: Encodable {
+    let moveOutDate: String
+}
+
+struct AssignEmployeeBody: Encodable {
+    let employeeUserId: UUID
+}
+
+struct UpdateServiceRequestStatusBody: Encodable {
+    let status: String
+    let comments: String?
+}
+
+struct UpdateEnquiryStatusBody: Encodable {
+    let status: String
+}
+
+struct CreateInspectionBody: Encodable {
+    let propertyId: UUID
+    let unitId: UUID?
+    let inspectorEmployeeId: UUID
+    let inspectionType: String
+    let inspectionDate: String
+    let notes: String?
+}
+
+struct UpdateInspectionStatusBody: Encodable {
+    let status: String
+}
+
+struct InvoiceLineItem: Codable, Identifiable, Hashable {
+    var id: UUID? = nil
+    let description: String
+    let quantity: Decimal
+    let unitPrice: Decimal
+    let lineTotal: Decimal?
+
+    init(id: UUID? = nil, description: String, quantity: Decimal, unitPrice: Decimal, lineTotal: Decimal? = nil) {
+        self.id = id
+        self.description = description
+        self.quantity = quantity
+        self.unitPrice = unitPrice
+        self.lineTotal = lineTotal
+    }
+}
+
+struct InvoiceItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let invoiceNumber: String?
+    let serviceRequestId: UUID?
+    let invoiceDate: String?
+    let tax: Decimal?
+    let discount: Decimal?
+    let totalAmount: Decimal?
+    let status: String
+    let items: [InvoiceLineItem]?
+    let createdAt: String?
+    let updatedAt: String?
+}
+
+struct CreateInvoiceLineBody: Encodable {
+    let description: String
+    let quantity: Decimal
+    let unitPrice: Decimal
+}
+
+struct CreateInvoiceBody: Encodable {
+    let serviceRequestId: UUID
+    let invoiceDate: String
+    let tax: Decimal
+    let discount: Decimal
+    let items: [CreateInvoiceLineBody]
+}
+
+struct UpsertTenantVerificationBody: Encodable {
+    let permanentAddress: String
+    let permanentLocality: String
+    let permanentCity: String
+    let permanentState: String
+    let permanentPincode: String
+}
+
+struct ReviewTenantVerificationBody: Encodable {
+    let decision: String
+    let notes: String?
+}
+
+enum ServiceRequestStatusOption: String, CaseIterable, Identifiable {
+    case OPEN, ASSIGNED, IN_PROGRESS, WAITING_FOR_PARTS, RESOLVED, CLOSED, REJECTED, CANCELLED
+    var id: String { rawValue }
+    var title: String { rawValue.replacingOccurrences(of: "_", with: " ") }
+}
+
+enum EnquiryStatusOption: String, CaseIterable, Identifiable {
+    case NEW, CONTACTED, PROPERTY_SHARED, VISIT_SCHEDULED, FOLLOW_UP, CONVERTED, NOT_INTERESTED, CLOSED
+    var id: String { rawValue }
+    var title: String { rawValue.replacingOccurrences(of: "_", with: " ") }
+}
+
+enum InspectionTypeOption: String, CaseIterable, Identifiable {
+    case MOVE_IN, MOVE_OUT, PERIODIC, REPAIR, VACANCY
+    var id: String { rawValue }
+    var title: String { rawValue.replacingOccurrences(of: "_", with: " ") }
+}
+
+enum InspectionStatusOption: String, CaseIterable, Identifiable {
+    case SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED
+    var id: String { rawValue }
+    var title: String { rawValue.replacingOccurrences(of: "_", with: " ") }
+}
+
+enum OccupancyStatusOption: String, CaseIterable, Identifiable {
+    case TENANTED, VACANT
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+}
+
+enum ToLetBoardStatusOption: String, CaseIterable, Identifiable {
+    case INSTALLED, NOT_INSTALLED
+    var id: String { rawValue }
+    var title: String { rawValue.replacingOccurrences(of: "_", with: " ") }
+}
