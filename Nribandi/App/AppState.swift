@@ -21,6 +21,6 @@ final class AppState: ObservableObject {
         await session.logout()
         environment = env
         env.save()
-        await api.updateEnvironment(env)
+        api.updateEnvironment(env)
     }
 }

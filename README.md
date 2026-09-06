@@ -80,7 +80,8 @@ Local uses `127.0.0.1:8082` so the Simulator reaches Docker on your Mac.
 
 ## TEST / PROD
 
-Edit `Nribandi/Resources/Info.plist` with your AWS API HTTPS URLs, then pick **TEST** or **PROD** in the app.
+Edit `Nribandi/Resources/Info.plist` with your AWS API HTTPS URLs.
+In **Debug**, pick **TEST** or **PROD** in the app. **Release / App Store** always uses PROD.
 
 ## What’s included
 
@@ -89,4 +90,4 @@ Edit `Nribandi/Resources/Info.plist` with your AWS API HTTPS URLs, then pick **T
 - Properties + units
 - Service requests
 - Enquiries
-- Profile + environment switcher
+- Profile (+ environment switcher in Debug only)
