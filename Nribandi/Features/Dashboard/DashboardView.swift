@@ -15,17 +15,33 @@ struct DashboardView: View {
                     ContentUnavailableView("Could not load", systemImage: "wifi.exclamationmark", description: Text(errorMessage))
                 } else if let summary {
                     ScrollView {
-                        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                            MetricCard(title: "Properties", value: "\(summary.totalProperties)", accent: NriTheme.teal)
-                            MetricCard(title: "Units", value: "\(summary.totalUnits)", accent: NriTheme.ink)
-                            MetricCard(title: "Occupied", value: "\(summary.occupiedUnits)", accent: NriTheme.leaf)
-                            MetricCard(title: "Vacant", value: "\(summary.vacantUnits)", accent: NriTheme.terracotta)
-                            MetricCard(title: "To-let boards", value: "\(summary.unitsWithToLetBoards)", accent: NriTheme.test)
-                            MetricCard(title: "Open requests", value: "\(summary.openServiceRequests)", accent: NriTheme.terracotta)
-                            MetricCard(title: "In progress", value: "\(summary.inProgressServiceRequests)", accent: NriTheme.teal)
-                            MetricCard(title: "New enquiries", value: "\(summary.newEnquiries)", accent: NriTheme.ink)
-                            MetricCard(title: "Pending KYC", value: "\(summary.pendingTenantVerifications)", accent: NriTheme.prod)
-                            MetricCard(title: "Upcoming inspections", value: "\(summary.upcomingInspections)", accent: NriTheme.leaf)
+                        VStack(alignment: .leading, spacing: 16) {
+                            if summary.totalProperties == 0 && summary.totalUnits == 0 {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("No demo data yet")
+                                        .font(.headline)
+                                        .foregroundStyle(NriTheme.ink)
+                                    Text("The API is connected, but the database is empty. In the backend repo run:\n\n./scripts/local-seed.sh\n\nThen pull to refresh this screen.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(NriTheme.slate)
+                                }
+                                .padding()
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .background(NriTheme.sand, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            }
+
+                            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+                                MetricCard(title: "Properties", value: "\(summary.totalProperties)", accent: NriTheme.teal)
+                                MetricCard(title: "Units", value: "\(summary.totalUnits)", accent: NriTheme.ink)
+                                MetricCard(title: "Occupied", value: "\(summary.occupiedUnits)", accent: NriTheme.leaf)
+                                MetricCard(title: "Vacant", value: "\(summary.vacantUnits)", accent: NriTheme.terracotta)
+                                MetricCard(title: "To-let boards", value: "\(summary.unitsWithToLetBoards)", accent: NriTheme.test)
+                                MetricCard(title: "Open requests", value: "\(summary.openServiceRequests)", accent: NriTheme.terracotta)
+                                MetricCard(title: "In progress", value: "\(summary.inProgressServiceRequests)", accent: NriTheme.teal)
+                                MetricCard(title: "New enquiries", value: "\(summary.newEnquiries)", accent: NriTheme.ink)
+                                MetricCard(title: "Pending KYC", value: "\(summary.pendingTenantVerifications)", accent: NriTheme.prod)
+                                MetricCard(title: "Upcoming inspections", value: "\(summary.upcomingInspections)", accent: NriTheme.leaf)
+                            }
                         }
                         .padding()
                     }
