@@ -17,6 +17,7 @@ final class AppState: ObservableObject {
     }
 
     func switchEnvironment(_ env: AppEnvironment) async {
+        guard AppEnvironment.allowsEnvironmentSelection else { return }
         await session.logout()
         environment = env
         env.save()

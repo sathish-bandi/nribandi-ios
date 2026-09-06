@@ -38,9 +38,23 @@ enum AppEnvironment: String, CaseIterable, Identifiable, Codable {
         }
     }
 
+    /// Debug / local Xcode runs may switch Local / TEST / PROD.
+    /// App Store and TestFlight (Release) are always PROD — no picker.
+    static var allowsEnvironmentSelection: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }
+
     private static let key = "nribandi.selectedEnvironment"
 
     static func loadSaved() -> AppEnvironment {
+        guard allowsEnvironmentSelection else {
+            UserDefaults.standard.removeObject(forKey: key)
+            return .prod
+        }
         if let raw = UserDefaults.standard.string(forKey: key), let env = AppEnvironment(rawValue: raw) {
             return env
         }
@@ -52,6 +66,10 @@ enum AppEnvironment: String, CaseIterable, Identifiable, Codable {
     }
 
     func save() {
+        guard Self.allowsEnvironmentSelection else {
+            UserDefaults.standard.removeObject(forKey: Self.key)
+            return
+        }
         UserDefaults.standard.set(rawValue, forKey: Self.key)
     }
 }

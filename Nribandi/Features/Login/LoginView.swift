@@ -4,8 +4,13 @@ struct LoginView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var session: SessionStore
 
+    #if DEBUG
     @State private var email = "admin@nribandi.local"
     @State private var password = "Nribandi@123"
+    #else
+    @State private var email = ""
+    @State private var password = ""
+    #endif
     @State private var isLoading = false
     @State private var errorMessage: String?
 
@@ -23,24 +28,26 @@ struct LoginView: View {
                     }
                     .padding(.top, 24)
 
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Environment").font(.subheadline.weight(.semibold))
-                        Picker("Environment", selection: Binding(
-                            get: { appState.environment },
-                            set: { newValue in Task { await appState.switchEnvironment(newValue) } }
-                        )) {
-                            ForEach(AppEnvironment.allCases) { env in
-                                Text(env.displayName).tag(env)
+                    if AppEnvironment.allowsEnvironmentSelection {
+                        VStack(alignment: .leading, spacing: 10) {
+                            Text("Environment").font(.subheadline.weight(.semibold))
+                            Picker("Environment", selection: Binding(
+                                get: { appState.environment },
+                                set: { newValue in Task { await appState.switchEnvironment(newValue) } }
+                            )) {
+                                ForEach(AppEnvironment.allCases) { env in
+                                    Text(env.displayName).tag(env)
+                                }
                             }
-                        }
-                        .pickerStyle(.segmented)
+                            .pickerStyle(.segmented)
 
-                        HStack(spacing: 8) {
-                            EnvBadge(env: appState.environment)
-                            Text(appState.environment.apiBaseURL.absoluteString)
-                                .font(.caption.monospaced())
-                                .foregroundStyle(NriTheme.slate)
-                                .lineLimit(1)
+                            HStack(spacing: 8) {
+                                EnvBadge(env: appState.environment)
+                                Text(appState.environment.apiBaseURL.absoluteString)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(NriTheme.slate)
+                                    .lineLimit(1)
+                            }
                         }
                     }
 
@@ -74,9 +81,11 @@ struct LoginView: View {
                     .background(NriTheme.teal, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                     .disabled(isLoading)
 
-                    Text("Local talks to Docker on this Mac at 127.0.0.1:8082. Set TEST/PROD URLs in Info.plist when AWS is ready.")
-                        .font(.caption)
-                        .foregroundStyle(NriTheme.slate)
+                    if AppEnvironment.allowsEnvironmentSelection {
+                        Text("Local talks to Docker on this Mac at 127.0.0.1:8082. Set TEST/PROD URLs in Info.plist when AWS is ready.")
+                            .font(.caption)
+                            .foregroundStyle(NriTheme.slate)
+                    }
                 }
                 .padding(24)
             }

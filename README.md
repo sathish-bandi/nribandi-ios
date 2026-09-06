@@ -13,7 +13,11 @@ This repository is **iOS only**. The Spring Boot API lives in a separate repo:
 | **TEST** | `qa` | `NribandiTestAPIBaseURL` in `Nribandi/Resources/Info.plist` |
 | **PROD** | `prod` | `NribandiProdAPIBaseURL` in `Nribandi/Resources/Info.plist` |
 
-Switch environment on the login screen or in **Profile**. Changing environment signs you out.
+**Debug (Xcode Run on your Mac):** Local / TEST / PROD picker is shown on Login and Profile.
+
+**App Store / TestFlight (Release):** no environment picker — the app always uses **PROD**.
+
+Changing environment in Debug signs you out.
 
 
 ## Quick start scripts (Mac)

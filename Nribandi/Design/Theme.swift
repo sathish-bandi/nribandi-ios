@@ -23,14 +23,17 @@ enum NriFormat {
 
 struct EnvBadge: View {
     let env: AppEnvironment
+
     var body: some View {
-        Text(env.displayName.uppercased())
-            .font(.caption2.weight(.bold))
-            .tracking(0.8)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .foregroundStyle(.white)
-            .background(color, in: Capsule())
+        if AppEnvironment.allowsEnvironmentSelection {
+            Text(env.displayName.uppercased())
+                .font(.caption2.weight(.bold))
+                .tracking(0.8)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .foregroundStyle(.white)
+                .background(color, in: Capsule())
+        }
     }
 
     private var color: Color {
