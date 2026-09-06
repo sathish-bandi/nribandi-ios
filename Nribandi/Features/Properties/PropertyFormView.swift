@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PropertyFormView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var session: SessionStore
     @Environment(\.dismiss) private var dismiss
 
     enum Mode {
@@ -32,6 +33,10 @@ struct PropertyFormView: View {
         return false
     }
 
+    private var needsOwnerPicker: Bool {
+        isCreate && session.user?.role == .ADMIN
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -57,7 +62,7 @@ struct PropertyFormView: View {
                     }
                 }
 
-                if isCreate {
+                if isCreate && needsOwnerPicker {
                     Section("Owner") {
                         if isLoadingOwners {
                             ProgressView("Loading owners…")
@@ -96,7 +101,7 @@ struct PropertyFormView: View {
             }
             .task {
                 prefill()
-                if isCreate { await loadOwners() }
+                if needsOwnerPicker { await loadOwners() }
             }
         }
     }
@@ -108,7 +113,7 @@ struct PropertyFormView: View {
             && !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && !state.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && pincode.count == 6
-            && (!isCreate || selectedOwnerId != nil)
+            && (!needsOwnerPicker || selectedOwnerId != nil)
     }
 
     private func prefill() {
