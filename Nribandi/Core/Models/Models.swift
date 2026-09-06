@@ -342,7 +342,7 @@ struct CreateFloorBody: Encodable {
 }
 
 enum UnitTypeOption: String, CaseIterable, Identifiable {
-    case ONE_BHK, TWO_BHK, THREE_BHK, FOUR_BHK, STUDIO, PENTHOUSE, VILLA, INDEPENDENT_HOUSE
+    case ONE_BHK, TWO_BHK, THREE_BHK, FOUR_BHK, FIVE_BHK, SIX_BHK, SEVEN_BHK, EIGHT_BHK, NINE_BHK, TEN_BHK, PENTHOUSE, VILLA, INDEPENDENT_HOUSE
     var id: String { rawValue }
     var title: String { rawValue.replacingOccurrences(of: "_", with: " ") }
 }
