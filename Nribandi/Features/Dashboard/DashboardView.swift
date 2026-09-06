@@ -21,7 +21,7 @@ struct DashboardView: View {
                                     Text("No demo data yet")
                                         .font(.headline)
                                         .foregroundStyle(NriTheme.ink)
-                                    Text("The API is connected, but Postgres has no demo rows yet.\n\nIn rental-property-app on your Mac:\n\n1. ./scripts/local-up.sh\n2. ./scripts/local-seed.sh\n\nOr double-click SEED-ON-MAC.command\n\nThen swipe down to refresh. Login: admin@nribandi.local / Nribandi@123")
+                                    Text("The API is connected, but Postgres has no demo rows yet.\n\nRestarting the API alone does not load data.\n\nIn rental-property-app on your Mac, double-click SEED-ON-MAC.command (or run ./scripts/local-seed.sh). Watch for \"properties\" and \"units\" counts — they must not be zero.\n\nThen swipe down here to refresh.\nLogin: admin@nribandi.local / Nribandi@123")
                                         .font(.subheadline)
                                         .foregroundStyle(NriTheme.slate)
                                 }
