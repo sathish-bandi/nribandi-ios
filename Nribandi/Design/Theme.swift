@@ -1,3 +1,4 @@
+import Foundation
 import SwiftUI
 
 enum NriTheme {
@@ -11,6 +12,13 @@ enum NriTheme {
     static let local = Color(red: 0.07, green: 0.45, blue: 0.48)
     static let test = Color(red: 0.75, green: 0.48, blue: 0.12)
     static let prod = Color(red: 0.55, green: 0.18, blue: 0.22)
+}
+
+enum NriFormat {
+    /// Formats `Decimal` for `Text` / `LocalizedStringKey` without deprecated interpolation.
+    static func decimal(_ value: Decimal) -> String {
+        NSDecimalNumber(decimal: value).stringValue
+    }
 }
 
 struct EnvBadge: View {

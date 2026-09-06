@@ -108,7 +108,7 @@ struct EnquiryDetailView: View {
                             LabeledContent("Unit type", value: unit)
                         }
                         if let budget = item.budget {
-                            LabeledContent("Budget", value: "\(budget)")
+                            LabeledContent("Budget", value: NriFormat.decimal(budget))
                         }
                         if let message = item.message, !message.isEmpty {
                             Text(message)

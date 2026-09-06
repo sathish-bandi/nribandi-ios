@@ -40,7 +40,7 @@ struct InvoicesView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(item.invoiceNumber ?? "Draft invoice").font(.headline)
                             if let total = item.totalAmount {
-                                Text("Total \(total)").font(.subheadline).foregroundStyle(NriTheme.slate)
+                                Text("Total \(NriFormat.decimal(total))").font(.subheadline).foregroundStyle(NriTheme.slate)
                             }
                             HStack {
                                 StatusChip(text: item.status)
@@ -119,9 +119,9 @@ struct InvoiceDetailView: View {
                 LabeledContent("Number", value: invoice.invoiceNumber ?? "—")
                 LabeledContent("Date", value: invoice.invoiceDate ?? "—")
                 LabeledContent("Status", value: invoice.status)
-                if let tax = invoice.tax { LabeledContent("Tax", value: "\(tax)") }
-                if let discount = invoice.discount { LabeledContent("Discount", value: "\(discount)") }
-                if let total = invoice.totalAmount { LabeledContent("Total", value: "\(total)") }
+                if let tax = invoice.tax { LabeledContent("Tax", value: NriFormat.decimal(tax)) }
+                if let discount = invoice.discount { LabeledContent("Discount", value: NriFormat.decimal(discount)) }
+                if let total = invoice.totalAmount { LabeledContent("Total", value: NriFormat.decimal(total)) }
             }
 
             if let lines = invoice.items, !lines.isEmpty {
@@ -129,7 +129,7 @@ struct InvoiceDetailView: View {
                     ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                         VStack(alignment: .leading, spacing: 2) {
                             Text(line.itemDescription).font(.subheadline.weight(.semibold))
-                            Text("Qty \(line.quantity) × \(line.unitPrice)")
+                            Text("Qty \(NriFormat.decimal(line.quantity)) × \(NriFormat.decimal(line.unitPrice))")
                                 .font(.footnote)
                                 .foregroundStyle(NriTheme.slate)
                         }
@@ -242,7 +242,7 @@ struct CreateInvoiceView: View {
                                 HStack {
                                     VStack(alignment: .leading) {
                                         Text(line.itemDescription)
-                                        Text("\(line.quantity) × \(line.unitPrice)")
+                                        Text("\(NriFormat.decimal(line.quantity)) × \(NriFormat.decimal(line.unitPrice))")
                                             .font(.caption)
                                             .foregroundStyle(NriTheme.slate)
                                     }
