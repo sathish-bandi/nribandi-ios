@@ -1,6 +1,8 @@
 import Foundation
 
-actor APIClient {
+/// Networking client. Runs on the main actor so it can safely use `SessionStore`.
+@MainActor
+final class APIClient {
     private var environment: AppEnvironment
     private let urlSession: URLSession
     private weak var sessionStore: SessionStore?
@@ -19,58 +21,104 @@ actor APIClient {
     }
 
     func login(email: String, password: String) async throws -> AuthResponse {
-        try await send(method: "POST", path: "/api/v1/auth/login",
-                       body: LoginRequest(email: email, password: password),
-                       authorized: false, as: AuthResponse.self)
+        try await send(
+            method: "POST",
+            path: "/api/v1/auth/login",
+            body: LoginRequest(email: email, password: password),
+            authorized: false,
+            as: AuthResponse.self
+        )
     }
 
     func refresh(refreshToken: String) async throws -> AuthResponse {
-        try await send(method: "POST", path: "/api/v1/auth/refresh-token",
-                       body: RefreshTokenRequest(refreshToken: refreshToken),
-                       authorized: false, as: AuthResponse.self)
+        try await send(
+            method: "POST",
+            path: "/api/v1/auth/refresh-token",
+            body: RefreshTokenRequest(refreshToken: refreshToken),
+            authorized: false,
+            as: AuthResponse.self
+        )
     }
 
     func logout(refreshToken: String) async throws {
         struct Empty: Decodable {}
-        _ = try? await send(method: "POST", path: "/api/v1/auth/logout",
-                            body: RefreshTokenRequest(refreshToken: refreshToken),
-                            authorized: false, as: Empty.self)
+        _ = try? await send(
+            method: "POST",
+            path: "/api/v1/auth/logout",
+            body: RefreshTokenRequest(refreshToken: refreshToken),
+            authorized: false,
+            as: Empty.self
+        )
     }
 
     func dashboardSummary() async throws -> DashboardSummary {
-        try await send(method: "GET", path: "/api/v1/dashboard/summary",
-                       body: Optional<String>.none, authorized: true, as: DashboardSummary.self)
+        try await send(
+            method: "GET",
+            path: "/api/v1/dashboard/summary",
+            body: Optional<String>.none,
+            authorized: true,
+            as: DashboardSummary.self
+        )
     }
 
     func properties(page: Int = 0, size: Int = 50) async throws -> PageResponse<PropertyItem> {
-        try await send(method: "GET", path: "/api/v1/properties?page=\(page)&size=\(size)",
-                       body: Optional<String>.none, authorized: true, as: PageResponse<PropertyItem>.self)
+        try await send(
+            method: "GET",
+            path: "/api/v1/properties?page=\(page)&size=\(size)",
+            body: Optional<String>.none,
+            authorized: true,
+            as: PageResponse<PropertyItem>.self
+        )
     }
 
     func property(id: UUID) async throws -> PropertyItem {
-        try await send(method: "GET", path: "/api/v1/properties/\(id.uuidString.lowercased())",
-                       body: Optional<String>.none, authorized: true, as: PropertyItem.self)
+        try await send(
+            method: "GET",
+            path: "/api/v1/properties/\(id.uuidString.lowercased())",
+            body: Optional<String>.none,
+            authorized: true,
+            as: PropertyItem.self
+        )
     }
 
     func units(propertyId: UUID) async throws -> [UnitItem] {
         let paged = "/api/v1/properties/\(propertyId.uuidString.lowercased())/units?page=0&size=200"
-        if let page = try? await send(method: "GET", path: paged, body: Optional<String>.none,
-                                      authorized: true, as: PageResponse<UnitItem>.self) {
+        if let page = try? await send(
+            method: "GET",
+            path: paged,
+            body: Optional<String>.none,
+            authorized: true,
+            as: PageResponse<UnitItem>.self
+        ) {
             return page.content
         }
-        return try await send(method: "GET",
-                              path: "/api/v1/properties/\(propertyId.uuidString.lowercased())/units",
-                              body: Optional<String>.none, authorized: true, as: [UnitItem].self)
+        return try await send(
+            method: "GET",
+            path: "/api/v1/properties/\(propertyId.uuidString.lowercased())/units",
+            body: Optional<String>.none,
+            authorized: true,
+            as: [UnitItem].self
+        )
     }
 
     func serviceRequests(page: Int = 0, size: Int = 50) async throws -> PageResponse<ServiceRequestItem> {
-        try await send(method: "GET", path: "/api/v1/service-requests?page=\(page)&size=\(size)",
-                       body: Optional<String>.none, authorized: true, as: PageResponse<ServiceRequestItem>.self)
+        try await send(
+            method: "GET",
+            path: "/api/v1/service-requests?page=\(page)&size=\(size)",
+            body: Optional<String>.none,
+            authorized: true,
+            as: PageResponse<ServiceRequestItem>.self
+        )
     }
 
     func enquiries(page: Int = 0, size: Int = 50) async throws -> PageResponse<EnquiryItem> {
-        try await send(method: "GET", path: "/api/v1/enquiries?page=\(page)&size=\(size)",
-                       body: Optional<String>.none, authorized: true, as: PageResponse<EnquiryItem>.self)
+        try await send(
+            method: "GET",
+            path: "/api/v1/enquiries?page=\(page)&size=\(size)",
+            body: Optional<String>.none,
+            authorized: true,
+            as: PageResponse<EnquiryItem>.self
+        )
     }
 
     private func send<Body: Encodable, Response: Decodable>(
@@ -92,9 +140,11 @@ actor APIClient {
             request.setValue("application/json", forHTTPHeaderField: "Content-Type")
             request.httpBody = try JSONEncoder().encode(body)
         }
+
         if authorized {
-            let token = await MainActor.run { sessionStore?.accessToken }
-            guard let token, !token.isEmpty else { throw APIError.unauthorized }
+            guard let token = sessionStore?.accessToken, !token.isEmpty else {
+                throw APIError.unauthorized
+            }
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         }
 
@@ -113,19 +163,31 @@ actor APIClient {
         if http.statusCode == 401, authorized, retryOnUnauthorized {
             let ok = await sessionStore?.refreshIfNeeded(using: self) ?? false
             if ok {
-                return try await send(method: method, path: path, body: body,
-                                      authorized: authorized, as: Response.self, retryOnUnauthorized: false)
+                return try await send(
+                    method: method,
+                    path: path,
+                    body: body,
+                    authorized: authorized,
+                    as: Response.self,
+                    retryOnUnauthorized: false
+                )
             }
             throw APIError.unauthorized
         }
 
         guard (200..<300).contains(http.statusCode) else {
             if let err = try? JSONDecoder().decode(ApiErrorResponse.self, from: data) {
-                throw APIError.http(status: http.statusCode, code: err.errorCode,
-                                    message: err.message ?? "Request failed (\(http.statusCode)).")
+                throw APIError.http(
+                    status: http.statusCode,
+                    code: err.errorCode,
+                    message: err.message ?? "Request failed (\(http.statusCode))."
+                )
             }
-            throw APIError.http(status: http.statusCode, code: nil,
-                                message: "Request failed (\(http.statusCode)).")
+            throw APIError.http(
+                status: http.statusCode,
+                code: nil,
+                message: "Request failed (\(http.statusCode))."
+            )
         }
 
         guard !data.isEmpty else { throw APIError.emptyData }
@@ -137,8 +199,11 @@ actor APIClient {
         } catch let api as APIError {
             throw api
         } catch {
-            do { return try JSONDecoder().decode(Response.self, from: data) }
-            catch { throw APIError.decoding(String(describing: error)) }
+            do {
+                return try JSONDecoder().decode(Response.self, from: data)
+            } catch {
+                throw APIError.decoding(String(describing: error))
+            }
         }
     }
 
@@ -147,10 +212,11 @@ actor APIClient {
         if ns.domain == NSURLErrorDomain {
             switch ns.code {
             case NSURLErrorCannotConnectToHost, NSURLErrorTimedOut, NSURLErrorNetworkConnectionLost:
-                return "Cannot reach \(baseURL.absoluteString). Start Docker (`./scripts/local-up.sh`), then run this app in the iOS Simulator with Local."
+                return "Cannot reach \(baseURL.absoluteString). Start the backend with ./scripts/local-up.sh in rental-property-app, then run this app with Local."
             case NSURLErrorAppTransportSecurityRequiresSecureConnection:
                 return "HTTP blocked by App Transport Security. Local ATS should allow 127.0.0.1."
-            default: break
+            default:
+                break
             }
         }
         return error.localizedDescription
