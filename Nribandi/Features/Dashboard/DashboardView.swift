@@ -6,9 +6,8 @@ enum DashboardMetric: String, Hashable, CaseIterable, Identifiable {
     case occupied
     case vacant
     case toLetBoards
-    case openRequests
+    case pendingRequests
     case inProgressRequests
-    case newEnquiries
     case pendingKyc
     case upcomingInspections
 
@@ -21,9 +20,8 @@ enum DashboardMetric: String, Hashable, CaseIterable, Identifiable {
         case .occupied: return "Occupied"
         case .vacant: return "Vacant"
         case .toLetBoards: return "To-let boards"
-        case .openRequests: return "Open requests"
+        case .pendingRequests: return "Pending service requests"
         case .inProgressRequests: return "In progress"
-        case .newEnquiries: return "New enquiries"
         case .pendingKyc: return "Pending KYC"
         case .upcomingInspections: return "Upcoming inspections"
         }
@@ -36,9 +34,8 @@ enum DashboardMetric: String, Hashable, CaseIterable, Identifiable {
         case .occupied: return "\(summary.occupiedUnits)"
         case .vacant: return "\(summary.vacantUnits)"
         case .toLetBoards: return "\(summary.unitsWithToLetBoards)"
-        case .openRequests: return "\(summary.openServiceRequests)"
+        case .pendingRequests: return "\(summary.openServiceRequests + summary.assignedServiceRequests)"
         case .inProgressRequests: return "\(summary.inProgressServiceRequests)"
-        case .newEnquiries: return "\(summary.newEnquiries)"
         case .pendingKyc: return "\(summary.pendingTenantVerifications)"
         case .upcomingInspections: return "\(summary.upcomingInspections)"
         }
@@ -51,9 +48,8 @@ enum DashboardMetric: String, Hashable, CaseIterable, Identifiable {
         case .occupied: return NriTheme.leaf
         case .vacant: return NriTheme.terracotta
         case .toLetBoards: return NriTheme.test
-        case .openRequests: return NriTheme.terracotta
+        case .pendingRequests: return NriTheme.terracotta
         case .inProgressRequests: return NriTheme.teal
-        case .newEnquiries: return NriTheme.ink
         case .pendingKyc: return NriTheme.prod
         case .upcomingInspections: return NriTheme.leaf
         }
@@ -144,7 +140,6 @@ struct DashboardMetricDetailView: View {
     @State private var properties: [PropertyItem] = []
     @State private var units: [UnitListRow] = []
     @State private var requests: [ServiceRequestItem] = []
-    @State private var enquiries: [EnquiryItem] = []
     @State private var inspections: [InspectionItem] = []
     @State private var verifications: [TenantVerificationItem] = []
     @State private var errorMessage: String?
@@ -198,7 +193,7 @@ struct DashboardMetricDetailView: View {
                                 .padding(.vertical, 2)
                             }
                         }
-                    case .openRequests, .inProgressRequests:
+                    case .pendingRequests, .inProgressRequests:
                         ForEach(requests) { item in
                             NavigationLink(value: item) {
                                 VStack(alignment: .leading, spacing: 4) {
@@ -214,22 +209,6 @@ struct DashboardMetricDetailView: View {
                                 }
                                 .padding(.vertical, 2)
                             }
-                        }
-                    case .newEnquiries:
-                        ForEach(enquiries) { item in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(item.customerName).font(.headline)
-                                Text(item.mobileNumber).font(.subheadline.monospaced()).foregroundStyle(NriTheme.slate)
-                                if let locality = item.requestedLocality {
-                                    Text(locality).font(.subheadline)
-                                }
-                                HStack {
-                                    StatusChip(text: item.source)
-                                    StatusChip(text: item.status)
-                                    if let unit = item.requestedUnitType { StatusChip(text: unit) }
-                                }
-                            }
-                            .padding(.vertical, 2)
                         }
                     case .pendingKyc:
                         ForEach(verifications) { item in
@@ -285,8 +264,7 @@ struct DashboardMetricDetailView: View {
         switch metric {
         case .properties: return properties.isEmpty
         case .units, .occupied, .vacant, .toLetBoards: return units.isEmpty
-        case .openRequests, .inProgressRequests: return requests.isEmpty
-        case .newEnquiries: return enquiries.isEmpty
+        case .pendingRequests, .inProgressRequests: return requests.isEmpty
         case .pendingKyc: return verifications.isEmpty
         case .upcomingInspections: return inspections.isEmpty
         }
@@ -308,12 +286,12 @@ struct DashboardMetricDetailView: View {
                 units = try await loadAllUnits().filter { $0.unit.occupancyStatus == "VACANT" }
             case .toLetBoards:
                 units = try await loadAllUnits().filter { $0.unit.toLetBoardStatus == "INSTALLED" }
-            case .openRequests:
-                requests = try await appState.api.serviceRequests(status: "OPEN").content
+            case .pendingRequests:
+                let open = try await appState.api.serviceRequests(status: "OPEN").content
+                let assigned = try await appState.api.serviceRequests(status: "ASSIGNED").content
+                requests = open + assigned
             case .inProgressRequests:
                 requests = try await appState.api.serviceRequests(status: "IN_PROGRESS").content
-            case .newEnquiries:
-                enquiries = try await appState.api.enquiries().content.filter { $0.status == "NEW" }
             case .pendingKyc:
                 verifications = try await appState.api.tenantVerifications(status: "PENDING_REVIEW")
             case .upcomingInspections:
