@@ -20,7 +20,7 @@ struct PropertyDetailView: View {
     }
 
     private var canManageStructure: Bool {
-        session.user?.role == .ADMIN || session.user?.role == .OWNER
+        session.user?.role == .ADMIN
     }
 
     private var usesBlocks: Bool {

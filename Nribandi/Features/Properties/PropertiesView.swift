@@ -10,7 +10,7 @@ struct PropertiesView: View {
     @State private var showCreate = false
 
     private var canManageProperties: Bool {
-        session.user?.role == .ADMIN || session.user?.role == .OWNER
+        session.user?.role == .ADMIN
     }
 
     var body: some View {

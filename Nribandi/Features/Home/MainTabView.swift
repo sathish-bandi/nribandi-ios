@@ -32,9 +32,12 @@ struct MainTabView: View {
         return role == .ADMIN || role == .EMPLOYEE
     }
 
-    private var showsPeopleTab: Bool { showsOpsTabs }
+    private var showsPeopleTab: Bool {
+        let role = session.user?.role
+        return role == .ADMIN || role == .EMPLOYEE || role == .OWNER
+    }
 
     private var peopleTabTitle: String {
-        session.user?.role == .EMPLOYEE ? "Tenants" : "People"
+        session.user?.role == .ADMIN ? "People" : "Tenants"
     }
 }
