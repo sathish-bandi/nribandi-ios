@@ -128,7 +128,7 @@ struct InvoiceDetailView: View {
                 Section("Line items") {
                     ForEach(Array(lines.enumerated()), id: \.offset) { _, line in
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(line.description).font(.subheadline.weight(.semibold))
+                            Text(line.itemDescription).font(.subheadline.weight(.semibold))
                             Text("Qty \(line.quantity) × \(line.unitPrice)")
                                 .font(.footnote)
                                 .foregroundStyle(NriTheme.slate)
@@ -238,20 +238,21 @@ struct CreateInvoiceView: View {
 
                     if !lines.isEmpty {
                         Section("Lines") {
-                            ForEach(Array(lines.enumerated()), id: \.offset) { index, line in
+                            ForEach(lines) { line in
                                 HStack {
                                     VStack(alignment: .leading) {
-                                        Text(line.description)
+                                        Text(line.itemDescription)
                                         Text("\(line.quantity) × \(line.unitPrice)")
                                             .font(.caption)
                                             .foregroundStyle(NriTheme.slate)
                                     }
                                     Spacer()
                                     Button(role: .destructive) {
-                                        lines.remove(at: index)
+                                        lines.removeAll { $0.id == line.id }
                                     } label: {
                                         Image(systemName: "trash")
                                     }
+                                    .buttonStyle(.borderless)
                                 }
                             }
                         }
@@ -286,7 +287,7 @@ struct CreateInvoiceView: View {
         else { return }
         lines.append(
             CreateInvoiceLineBody(
-                description: lineDescription.trimmingCharacters(in: .whitespacesAndNewlines),
+                itemDescription: lineDescription.trimmingCharacters(in: .whitespacesAndNewlines),
                 quantity: quantity,
                 unitPrice: unitPrice
             )

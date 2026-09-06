@@ -60,7 +60,8 @@ enum FieldLabel {
         case "moveInDate": return "Move-in date"
         case "moveOutDate": return "Move-out date"
         default:
-            return leaf.prefix(1).uppercased() + leaf.dropFirst()
+            guard let first = leaf.first else { return "Field" }
+            return String(first).uppercased() + String(leaf.dropFirst())
         }
     }
 }
@@ -165,10 +166,11 @@ struct UnitItem: Decodable, Identifiable, Hashable {
     let updatedAt: String?
 
     var title: String {
+        let floorLabel = floorNumber.map(String.init) ?? "—"
         if let blockNumber, !blockNumber.isEmpty {
-            return "Block \(blockNumber) · Fl \(floorNumber) · \(unitNumber)"
+            return "Block \(blockNumber) · Fl \(floorLabel) · \(unitNumber)"
         }
-        return "Fl \(floorNumber) · \(unitNumber)"
+        return "Fl \(floorLabel) · \(unitNumber)"
     }
 }
 
@@ -475,14 +477,23 @@ struct UpdateInspectionStatusBody: Encodable {
 
 struct InvoiceLineItem: Codable, Identifiable, Hashable {
     var id: UUID? = nil
-    let description: String
+    /// Display/API line text. Named to avoid clashing with `CustomStringConvertible.description`.
+    let itemDescription: String
     let quantity: Decimal
     let unitPrice: Decimal
     let lineTotal: Decimal?
 
-    init(id: UUID? = nil, description: String, quantity: Decimal, unitPrice: Decimal, lineTotal: Decimal? = nil) {
+    enum CodingKeys: String, CodingKey {
+        case id
+        case itemDescription = "description"
+        case quantity
+        case unitPrice
+        case lineTotal
+    }
+
+    init(id: UUID? = nil, itemDescription: String, quantity: Decimal, unitPrice: Decimal, lineTotal: Decimal? = nil) {
         self.id = id
-        self.description = description
+        self.itemDescription = itemDescription
         self.quantity = quantity
         self.unitPrice = unitPrice
         self.lineTotal = lineTotal
@@ -503,10 +514,18 @@ struct InvoiceItem: Decodable, Identifiable, Hashable {
     let updatedAt: String?
 }
 
-struct CreateInvoiceLineBody: Encodable {
-    let description: String
+struct CreateInvoiceLineBody: Encodable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    /// Line text sent to the API as `description`.
+    let itemDescription: String
     let quantity: Decimal
     let unitPrice: Decimal
+
+    enum CodingKeys: String, CodingKey {
+        case itemDescription = "description"
+        case quantity
+        case unitPrice
+    }
 }
 
 struct CreateInvoiceBody: Encodable {
