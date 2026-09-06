@@ -72,7 +72,7 @@ struct LoginView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(.white)
                     .background(NriTheme.teal, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .disabled(isLoading || email.isEmpty || password.isEmpty)
+                    .disabled(isLoading)
 
                     Text("Local talks to Docker on this Mac at 127.0.0.1:8082. Set TEST/PROD URLs in Info.plist when AWS is ready.")
                         .font(.caption)
@@ -88,13 +88,26 @@ struct LoginView: View {
     }
 
     private func signIn() {
+        let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedEmail.isEmpty {
+            errorMessage = "Email is required."
+            return
+        }
+        if !trimmedEmail.contains("@") {
+            errorMessage = "Enter a valid email address."
+            return
+        }
+        if password.isEmpty {
+            errorMessage = "Password is required."
+            return
+        }
         errorMessage = nil
         isLoading = true
         Task {
             defer { isLoading = false }
             do {
                 let auth = try await appState.api.login(
-                    email: email.trimmingCharacters(in: .whitespacesAndNewlines),
+                    email: trimmedEmail,
                     password: password
                 )
                 session.apply(auth)

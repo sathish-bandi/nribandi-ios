@@ -23,6 +23,17 @@ struct PropertyDetailView: View {
         session.user?.role == .ADMIN || session.user?.role == .OWNER
     }
 
+    private var usesBlocks: Bool {
+        PropertyTypeOption(rawValue: property.propertyType)?.usesBlocks == true
+    }
+
+    private var structureHint: String {
+        if usesBlocks {
+            return "Set up this property in order: add blocks/towers → add floors under each block → add units and map each unit to 1/2/3 BHK."
+        }
+        return "Add floors first, then add units and map each unit to its BHK layout (1 BHK, 2 BHK, 3 BHK, …)."
+    }
+
     var body: some View {
         List {
             Section("Address") {
@@ -64,7 +75,13 @@ struct PropertyDetailView: View {
                 } else if let errorMessage {
                     Text(errorMessage).foregroundStyle(NriTheme.terracotta)
                 } else if units.isEmpty {
-                    Text("No units yet.")
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(structureHint)
+                            .foregroundStyle(NriTheme.slate)
+                        Text("When adding a unit, choose the BHK layout (1 BHK, 2 BHK, 3 BHK, …) for that floor.")
+                            .font(.footnote)
+                            .foregroundStyle(NriTheme.slate)
+                    }
                 } else {
                     ForEach(units) { unit in
                         NavigationLink {
@@ -73,7 +90,7 @@ struct PropertyDetailView: View {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(unit.title).font(.subheadline.weight(.semibold))
                                 HStack {
-                                    StatusChip(text: unit.unitType)
+                                    StatusChip(text: UnitTypeDisplay.title(for: unit.unitType))
                                     StatusChip(text: unit.occupancyStatus)
                                     StatusChip(text: unit.toLetBoardStatus)
                                 }
@@ -91,9 +108,11 @@ struct PropertyDetailView: View {
                 if canManageStructure {
                     Menu {
                         Button("Edit property") { showEdit = true }
-                        Button("Add block") { showAddBlock = true }
+                        if usesBlocks {
+                            Button("Add block / tower") { showAddBlock = true }
+                        }
                         Button("Add floor") { showAddFloor = true }
-                        Button("Add unit") { showAddUnit = true }
+                        Button("Add unit (BHK)") { showAddUnit = true }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
@@ -112,7 +131,7 @@ struct PropertyDetailView: View {
             }
         }
         .sheet(isPresented: $showAddFloor) {
-            AddFloorSheet(propertyId: property.id, blocks: blocks) {
+            AddFloorSheet(propertyId: property.id, blocks: blocks, requiresBlock: usesBlocks) {
                 await reload()
             }
         }
@@ -182,13 +201,18 @@ private struct AddBlockSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { Task { await save() } }
-                        .disabled(isSaving || blockNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .disabled(isSaving)
                 }
             }
         }
     }
 
     private func save() async {
+        let trimmedNumber = blockNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedNumber.isEmpty else {
+            errorMessage = "Block number is required (for example A, B, or Tower-1)."
+            return
+        }
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }
@@ -197,7 +221,7 @@ private struct AddBlockSheet: View {
             _ = try await appState.api.createBlock(
                 propertyId: propertyId,
                 CreateBlockBody(
-                    blockNumber: blockNumber.trimmingCharacters(in: .whitespacesAndNewlines),
+                    blockNumber: trimmedNumber,
                     name: trimmedName.isEmpty ? nil : trimmedName
                 )
             )
@@ -215,6 +239,7 @@ private struct AddFloorSheet: View {
 
     let propertyId: UUID
     let blocks: [BlockItem]
+    let requiresBlock: Bool
     var onSaved: () async -> Void
 
     @State private var floorNumber = 1
@@ -226,16 +251,35 @@ private struct AddFloorSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Floor") {
+                Section {
                     Stepper("Floor number: \(floorNumber)", value: $floorNumber, in: 0...200)
                     TextField("Name (optional)", text: $name)
-                    if !blocks.isEmpty {
+                    if requiresBlock {
+                        if blocks.isEmpty {
+                            Text("Add a block / tower first. Apartment and high-rise floors must belong to a block.")
+                                .foregroundStyle(NriTheme.terracotta)
+                                .font(.footnote)
+                        } else {
+                            Picker("Block / tower", selection: $selectedBlockId) {
+                                Text("Select block").tag(Optional<UUID>.none)
+                                ForEach(blocks) { block in
+                                    Text("Block \(block.blockNumber)").tag(Optional(block.id))
+                                }
+                            }
+                        }
+                    } else if !blocks.isEmpty {
                         Picker("Block (optional)", selection: $selectedBlockId) {
                             Text("None").tag(Optional<UUID>.none)
                             ForEach(blocks) { block in
                                 Text("Block \(block.blockNumber)").tag(Optional(block.id))
                             }
                         }
+                    }
+                } header: {
+                    Text("Floor")
+                } footer: {
+                    if requiresBlock {
+                        Text("For apartments and high-rises, every floor must be mapped to a block.")
                     }
                 }
                 if let errorMessage {
@@ -251,10 +295,25 @@ private struct AddFloorSheet: View {
                         .disabled(isSaving)
                 }
             }
+            .onAppear {
+                if selectedBlockId == nil {
+                    selectedBlockId = blocks.first?.id
+                }
+            }
         }
     }
 
     private func save() async {
+        if requiresBlock {
+            if blocks.isEmpty {
+                errorMessage = "Add a block / tower before creating floors for this property type."
+                return
+            }
+            if selectedBlockId == nil {
+                errorMessage = "Select a block / tower for this floor."
+                return
+            }
+        }
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }
@@ -288,14 +347,20 @@ private struct AddUnitSheet: View {
 
     @State private var selectedFloorId: UUID?
     @State private var unitNumber = ""
-    @State private var unitType: UnitTypeOption = .ONE_BHK
+    @State private var unitType: UnitTypeOption = .TWO_BHK
     @State private var errorMessage: String?
     @State private var isSaving = false
+
+    private static let commonLayouts: [UnitTypeOption] = [.ONE_BHK, .TWO_BHK, .THREE_BHK, .FOUR_BHK]
+    private static let otherLayouts: [UnitTypeOption] = [
+        .PENTHOUSE, .VILLA, .INDEPENDENT_HOUSE,
+        .FIVE_BHK, .SIX_BHK, .SEVEN_BHK, .EIGHT_BHK, .NINE_BHK, .TEN_BHK
+    ]
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Unit") {
+                Section {
                     if floors.isEmpty {
                         Text("Add a floor before creating units.")
                             .foregroundStyle(NriTheme.terracotta)
@@ -307,13 +372,56 @@ private struct AddUnitSheet: View {
                             }
                         }
                     }
-                    TextField("Unit number", text: $unitNumber)
-                    Picker("Type", selection: $unitType) {
-                        ForEach(UnitTypeOption.allCases) { option in
-                            Text(option.title).tag(option)
+                    TextField("Unit number (e.g. 201)", text: $unitNumber)
+                        .textInputAutocapitalization(.characters)
+                } header: {
+                    Text("Location")
+                }
+
+                Section {
+                    ForEach(Self.commonLayouts) { option in
+                        Button {
+                            unitType = option
+                        } label: {
+                            HStack {
+                                Text(option.title)
+                                    .foregroundStyle(NriTheme.ink)
+                                Spacer()
+                                if unitType == option {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(NriTheme.teal)
+                                }
+                            }
                         }
                     }
+                } header: {
+                    Text("BHK layout")
+                } footer: {
+                    Text("Required. Map this flat to its layout — for example unit 201 as 2 BHK, unit 301 as 3 BHK.")
                 }
+
+                Section {
+                    ForEach(Self.otherLayouts) { option in
+                        Button {
+                            unitType = option
+                        } label: {
+                            HStack {
+                                Text(option.title)
+                                    .foregroundStyle(NriTheme.ink)
+                                Spacer()
+                                if unitType == option {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(NriTheme.teal)
+                                }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Specialty layouts")
+                } footer: {
+                    Text("Selected layout: \(unitType.title)")
+                }
+
                 if let errorMessage {
                     Section { Text(errorMessage).foregroundStyle(NriTheme.terracotta) }
                 }
@@ -324,7 +432,7 @@ private struct AddUnitSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { Task { await save() } }
-                        .disabled(isSaving || !canSave)
+                        .disabled(isSaving)
                 }
             }
             .onAppear {
@@ -335,10 +443,6 @@ private struct AddUnitSheet: View {
         }
     }
 
-    private var canSave: Bool {
-        selectedFloorId != nil && !unitNumber.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-    }
-
     private func floorPickerLabel(_ floor: FloorItem) -> String {
         if let block = floor.blockNumber, !block.isEmpty {
             return "Block \(block) · Floor \(floor.floorNumber)"
@@ -347,7 +451,19 @@ private struct AddUnitSheet: View {
     }
 
     private func save() async {
-        guard let selectedFloorId else { return }
+        if floors.isEmpty {
+            errorMessage = "Add a floor before creating units."
+            return
+        }
+        guard let selectedFloorId else {
+            errorMessage = "Select the floor this unit belongs to."
+            return
+        }
+        let trimmed = unitNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            errorMessage = "Enter a unit number (for example 101 or A-201)."
+            return
+        }
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }
@@ -356,7 +472,7 @@ private struct AddUnitSheet: View {
                 propertyId: propertyId,
                 CreateUnitBody(
                     floorId: selectedFloorId,
-                    unitNumber: unitNumber.trimmingCharacters(in: .whitespacesAndNewlines),
+                    unitNumber: trimmed,
                     unitType: unitType.rawValue
                 )
             )

@@ -60,6 +60,8 @@ struct PropertyFormView: View {
                             Text(option.title).tag(option)
                         }
                     }
+                } footer: {
+                    Text("After saving, add blocks (if apartment/high-rise), floors, then units with 1/2/3 BHK layouts.")
                 }
 
                 if isCreate && needsOwnerPicker {
@@ -96,7 +98,7 @@ struct PropertyFormView: View {
                     Button(isSaving ? "Saving…" : "Save") {
                         Task { await save() }
                     }
-                    .disabled(isSaving || !isValid)
+                    .disabled(isSaving)
                 }
             }
             .task {
@@ -106,14 +108,30 @@ struct PropertyFormView: View {
         }
     }
 
-    private var isValid: Bool {
-        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !locality.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && !state.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            && pincode.count == 6
-            && (!needsOwnerPicker || selectedOwnerId != nil)
+    private func validationMessage() -> String? {
+        if name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Property name is required."
+        }
+        if address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Address is required."
+        }
+        if locality.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Locality is required."
+        }
+        if city.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "City is required."
+        }
+        if state.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "State is required."
+        }
+        let pin = pincode.trimmingCharacters(in: .whitespacesAndNewlines)
+        if pin.count != 6 || pin.contains(where: { !$0.isNumber }) {
+            return "Pincode must be a 6-digit Indian PIN code."
+        }
+        if needsOwnerPicker && selectedOwnerId == nil {
+            return "Select an owner for this property, or create an owner under People first."
+        }
+        return nil
     }
 
     private func prefill() {
@@ -143,6 +161,10 @@ struct PropertyFormView: View {
     }
 
     private func save() async {
+        if let message = validationMessage() {
+            errorMessage = message
+            return
+        }
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }

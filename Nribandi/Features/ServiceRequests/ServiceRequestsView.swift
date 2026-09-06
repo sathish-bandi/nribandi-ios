@@ -205,19 +205,11 @@ struct CreateServiceRequestView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Submit") { Task { await submit() } }
-                        .disabled(isSaving || !canSubmit)
+                        .disabled(isSaving || isBootstrapping)
                 }
             }
             .task { await bootstrap() }
         }
-    }
-
-    private var canSubmit: Bool {
-        guard !titleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
-              !descriptionText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else { return false }
-        if isTenant { return selectedTenancyId != nil }
-        return selectedPropertyId != nil
     }
 
     private func bootstrap() async {
@@ -249,9 +241,16 @@ struct CreateServiceRequestView: View {
     }
 
     private func submit() async {
-        isSaving = true
-        errorMessage = nil
-        defer { isSaving = false }
+        let trimmedTitle = titleText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedDescription = descriptionText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmedTitle.isEmpty {
+            errorMessage = "Title is required."
+            return
+        }
+        if trimmedDescription.isEmpty {
+            errorMessage = "Describe the issue so staff can act on it."
+            return
+        }
 
         let propertyId: UUID
         let unitId: UUID?
@@ -271,12 +270,16 @@ struct CreateServiceRequestView: View {
             unitId = selectedUnitId
         }
 
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+
         let body = CreateServiceRequestBody(
             propertyId: propertyId,
             unitId: unitId,
             category: category,
-            title: titleText.trimmingCharacters(in: .whitespacesAndNewlines),
-            description: descriptionText.trimmingCharacters(in: .whitespacesAndNewlines),
+            title: trimmedTitle,
+            description: trimmedDescription,
             priority: priority
         )
 

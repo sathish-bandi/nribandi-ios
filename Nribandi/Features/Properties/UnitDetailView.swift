@@ -44,7 +44,7 @@ struct UnitDetailView: View {
                 if let floor = unit.floorNumber {
                     LabeledContent("Floor", value: "\(floor)")
                 }
-                LabeledContent("Type", value: unit.unitType.replacingOccurrences(of: "_", with: " "))
+                LabeledContent("Type", value: UnitTypeDisplay.title(for: unit.unitType))
                 HStack {
                     StatusChip(text: unit.occupancyStatus)
                     StatusChip(text: unit.toLetBoardStatus)
@@ -194,7 +194,7 @@ private struct AssignTenancySheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { Task { await save() } }
-                        .disabled(isSaving || selectedTenantId == nil)
+                        .disabled(isSaving)
                 }
             }
             .task { await loadTenants() }
@@ -206,14 +206,23 @@ private struct AssignTenancySheet: View {
         defer { isLoading = false }
         do {
             tenants = try await appState.api.users(role: "TENANT", size: 100).content.filter(\.active)
-            selectedTenantId = tenants.first?.id
+            if selectedTenantId == nil {
+                selectedTenantId = tenants.first?.id
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
     }
 
     private func save() async {
-        guard let selectedTenantId else { return }
+        if tenants.isEmpty {
+            errorMessage = "No active tenants found. Create a tenant under People first, then assign tenancy."
+            return
+        }
+        guard let selectedTenantId else {
+            errorMessage = "Select a tenant for this unit."
+            return
+        }
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }

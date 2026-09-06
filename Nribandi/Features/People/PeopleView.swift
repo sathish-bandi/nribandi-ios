@@ -228,20 +228,32 @@ struct UserFormView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Details") {
+                Section {
                     TextField("Full name", text: $fullName)
+                        .textContentType(.name)
                     if case .create = mode {
                         TextField("Email", text: $email)
                             .textInputAutocapitalization(.never)
                             .keyboardType(.emailAddress)
-                        SecureField("Temporary password", text: $password)
+                            .textContentType(.emailAddress)
+                            .autocorrectionDisabled()
+                        SecureField("Temporary password (min 8 characters)", text: $password)
+                            .textContentType(.newPassword)
                     }
-                    TextField("Phone", text: $phone)
+                    TextField("Phone (10–15 digits)", text: $phone)
                         .keyboardType(.phonePad)
+                        .textContentType(.telephoneNumber)
+                } header: {
+                    Text("Details")
+                } footer: {
+                    Text(footerHelp)
                 }
+
                 if let errorMessage {
                     Section {
-                        Text(errorMessage).foregroundStyle(NriTheme.terracotta)
+                        Text(errorMessage)
+                            .foregroundStyle(NriTheme.terracotta)
+                            .font(.footnote)
                     }
                 }
             }
@@ -255,20 +267,19 @@ struct UserFormView: View {
                     Button(isSaving ? "Saving…" : "Save") {
                         Task { await save() }
                     }
-                    .disabled(isSaving || !isValid)
+                    .disabled(isSaving)
                 }
             }
             .onAppear(perform: prefill)
         }
     }
 
-    private var isValid: Bool {
-        guard !fullName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+    private var footerHelp: String {
         switch mode {
-        case .create:
-            return email.contains("@") && password.count >= 8
+        case .create(let role):
+            return "Creates a \(role.title.lowercased()) login. Phone is optional but must be 10–15 digits if provided. Share the temporary password securely."
         case .edit:
-            return true
+            return "Phone is optional. If entered, use 10–15 digits (optional + country code)."
         }
     }
 
@@ -280,17 +291,52 @@ struct UserFormView: View {
         }
     }
 
+    private func validate() -> String? {
+        let name = fullName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.isEmpty { return "Full name is required." }
+        if name.count > 150 { return "Full name must be at most 150 characters." }
+
+        let trimmedPhone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmedPhone.isEmpty {
+            let phonePattern = #"^\+?[0-9]{10,15}$"#
+            if trimmedPhone.range(of: phonePattern, options: .regularExpression) == nil {
+                return "Phone must be 10–15 digits (optional + country code). Example: 9876543210"
+            }
+        }
+
+        if case .create = mode {
+            let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmedEmail.isEmpty { return "Email is required." }
+            if trimmedEmail.count > 255 { return "Email must be at most 255 characters." }
+            if !trimmedEmail.contains("@") || !trimmedEmail.contains(".") {
+                return "Enter a valid email address (example: owner@example.com)."
+            }
+            if password.count < 8 {
+                return "Password must be at least 8 characters."
+            }
+            if password.count > 100 {
+                return "Password must be at most 100 characters."
+            }
+        }
+        return nil
+    }
+
     private func save() async {
+        if let validation = validate() {
+            errorMessage = validation
+            return
+        }
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }
+        let trimmedPhone = phone.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             switch mode {
             case .create(let role):
                 _ = try await appState.api.createUser(
                     CreateUserBody(
                         email: email.trimmingCharacters(in: .whitespacesAndNewlines).lowercased(),
-                        phone: phone.isEmpty ? nil : phone,
+                        phone: trimmedPhone.isEmpty ? nil : trimmedPhone,
                         fullName: fullName.trimmingCharacters(in: .whitespacesAndNewlines),
                         password: password,
                         role: role.rawValue
@@ -301,7 +347,7 @@ struct UserFormView: View {
                     id: user.id,
                     UpdateUserBody(
                         fullName: fullName.trimmingCharacters(in: .whitespacesAndNewlines),
-                        phone: phone.isEmpty ? nil : phone
+                        phone: trimmedPhone.isEmpty ? nil : trimmedPhone
                     )
                 )
             }

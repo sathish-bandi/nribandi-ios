@@ -575,7 +575,7 @@ final class APIClient {
         }
         guard (200..<300).contains(http.statusCode) else {
             if let err = try? JSONDecoder().decode(ApiErrorResponse.self, from: data) {
-                throw APIError.http(status: http.statusCode, code: err.errorCode, message: err.message ?? "Upload failed.")
+                throw APIError.fromApiError(err, status: http.statusCode)
             }
             throw APIError.http(status: http.statusCode, code: nil, message: "Upload failed (\(http.statusCode)).")
         }
@@ -646,11 +646,7 @@ final class APIClient {
 
         guard (200..<300).contains(http.statusCode) else {
             if let err = try? JSONDecoder().decode(ApiErrorResponse.self, from: data) {
-                throw APIError.http(
-                    status: http.statusCode,
-                    code: err.errorCode,
-                    message: err.message ?? "Request failed (\(http.statusCode))."
-                )
+                throw APIError.fromApiError(err, status: http.statusCode)
             }
             throw APIError.http(
                 status: http.statusCode,

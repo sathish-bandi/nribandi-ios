@@ -14,6 +14,55 @@ struct ApiErrorResponse: Decodable {
     let status: Int?
     let path: String?
     let timestamp: String?
+    let fieldErrors: [ApiFieldError]?
+
+    /// Prefer field-level details when the backend only returns a generic message.
+    var userFacingMessage: String {
+        let fields = (fieldErrors ?? []).compactMap { err -> String? in
+            let label = FieldLabel.display(err.field)
+            let msg = (err.message ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !msg.isEmpty else { return nil }
+            return "\(label): \(msg)"
+        }
+        if !fields.isEmpty {
+            return fields.joined(separator: "\n")
+        }
+        return (message ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+struct ApiFieldError: Decodable {
+    let field: String?
+    let message: String?
+}
+
+enum FieldLabel {
+    static func display(_ raw: String?) -> String {
+        guard let raw, !raw.isEmpty else { return "Field" }
+        let leaf = raw.split(separator: ".").last.map(String.init) ?? raw
+        switch leaf {
+        case "fullName": return "Full name"
+        case "email": return "Email"
+        case "phone": return "Phone"
+        case "password": return "Password"
+        case "role": return "Role"
+        case "pincode": return "Pincode"
+        case "numberOfFloors": return "Floors"
+        case "propertyType": return "Property type"
+        case "propertyPurpose": return "Purpose"
+        case "ownerId": return "Owner"
+        case "blockNumber": return "Block number"
+        case "floorNumber": return "Floor number"
+        case "floorId": return "Floor"
+        case "unitNumber": return "Unit number"
+        case "unitType": return "Unit type"
+        case "tenantUserId": return "Tenant"
+        case "moveInDate": return "Move-in date"
+        case "moveOutDate": return "Move-out date"
+        default:
+            return leaf.prefix(1).uppercased() + leaf.dropFirst()
+        }
+    }
 }
 
 struct PageResponse<T: Decodable>: Decodable {
@@ -305,6 +354,7 @@ enum PropertyTypeOption: String, CaseIterable, Identifiable {
     case APARTMENT, INDEPENDENT_HOUSE, VILLA, HIGH_RISE, MULTI_STOREY
     var id: String { rawValue }
     var title: String { rawValue.replacingOccurrences(of: "_", with: " ").capitalized }
+    var usesBlocks: Bool { self == .APARTMENT || self == .HIGH_RISE || self == .MULTI_STOREY }
 }
 
 enum PropertyPurposeOption: String, CaseIterable, Identifiable {
@@ -344,7 +394,37 @@ struct CreateFloorBody: Encodable {
 enum UnitTypeOption: String, CaseIterable, Identifiable {
     case ONE_BHK, TWO_BHK, THREE_BHK, FOUR_BHK, FIVE_BHK, SIX_BHK, SEVEN_BHK, EIGHT_BHK, NINE_BHK, TEN_BHK, PENTHOUSE, VILLA, INDEPENDENT_HOUSE
     var id: String { rawValue }
-    var title: String { rawValue.replacingOccurrences(of: "_", with: " ") }
+
+    /// Common Hyderabad inventory first, then larger / specialty layouts.
+    static var pickerCases: [UnitTypeOption] {
+        [.ONE_BHK, .TWO_BHK, .THREE_BHK, .FOUR_BHK, .PENTHOUSE, .VILLA, .INDEPENDENT_HOUSE,
+         .FIVE_BHK, .SIX_BHK, .SEVEN_BHK, .EIGHT_BHK, .NINE_BHK, .TEN_BHK]
+    }
+
+    var title: String {
+        switch self {
+        case .ONE_BHK: return "1 BHK"
+        case .TWO_BHK: return "2 BHK"
+        case .THREE_BHK: return "3 BHK"
+        case .FOUR_BHK: return "4 BHK"
+        case .FIVE_BHK: return "5 BHK"
+        case .SIX_BHK: return "6 BHK"
+        case .SEVEN_BHK: return "7 BHK"
+        case .EIGHT_BHK: return "8 BHK"
+        case .NINE_BHK: return "9 BHK"
+        case .TEN_BHK: return "10 BHK"
+        case .PENTHOUSE: return "Penthouse"
+        case .VILLA: return "Villa"
+        case .INDEPENDENT_HOUSE: return "Independent house"
+        }
+    }
+}
+
+enum UnitTypeDisplay {
+    static func title(for raw: String) -> String {
+        UnitTypeOption(rawValue: raw)?.title
+            ?? raw.replacingOccurrences(of: "_", with: " ").capitalized
+    }
 }
 
 struct CreateUnitBody: Encodable {
