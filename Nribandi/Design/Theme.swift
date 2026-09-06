@@ -38,10 +38,19 @@ struct MetricCard: View {
     let title: String
     let value: String
     let accent: Color
+    var showsChevron: Bool = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(title).font(.caption).foregroundStyle(NriTheme.slate)
+            HStack(alignment: .top) {
+                Text(title).font(.caption).foregroundStyle(NriTheme.slate)
+                Spacer(minLength: 4)
+                if showsChevron {
+                    Image(systemName: "chevron.right")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(NriTheme.slate.opacity(0.7))
+                }
+            }
             Text(value)
                 .font(.system(.title2, design: .rounded).weight(.bold))
                 .foregroundStyle(NriTheme.ink)
@@ -52,6 +61,7 @@ struct MetricCard: View {
         .overlay(alignment: .topTrailing) {
             Capsule().fill(accent).frame(width: 18, height: 4).padding(12)
         }
+        .contentShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 

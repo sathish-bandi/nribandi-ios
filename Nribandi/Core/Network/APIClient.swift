@@ -101,10 +101,14 @@ final class APIClient {
         )
     }
 
-    func serviceRequests(page: Int = 0, size: Int = 50) async throws -> PageResponse<ServiceRequestItem> {
-        try await send(
+    func serviceRequests(page: Int = 0, size: Int = 50, status: String? = nil) async throws -> PageResponse<ServiceRequestItem> {
+        var path = "/api/v1/service-requests?page=\(page)&size=\(size)"
+        if let status, !status.isEmpty {
+            path += "&status=\(status)"
+        }
+        return try await send(
             method: "GET",
-            path: "/api/v1/service-requests?page=\(page)&size=\(size)",
+            path: path,
             body: Optional<String>.none,
             authorized: true,
             as: PageResponse<ServiceRequestItem>.self
@@ -168,6 +172,26 @@ final class APIClient {
             body: Optional<String>.none,
             authorized: true,
             as: PageResponse<EnquiryItem>.self
+        )
+    }
+
+    func inspections(page: Int = 0, size: Int = 50) async throws -> PageResponse<InspectionItem> {
+        try await send(
+            method: "GET",
+            path: "/api/v1/inspections?page=\(page)&size=\(size)",
+            body: Optional<String>.none,
+            authorized: true,
+            as: PageResponse<InspectionItem>.self
+        )
+    }
+
+    func tenantVerifications(status: String = "PENDING_REVIEW") async throws -> [TenantVerificationItem] {
+        try await send(
+            method: "GET",
+            path: "/api/v1/tenant-verifications?status=\(status)",
+            body: Optional<String>.none,
+            authorized: true,
+            as: [TenantVerificationItem].self
         )
     }
 

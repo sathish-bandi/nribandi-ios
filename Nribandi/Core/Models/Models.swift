@@ -202,3 +202,48 @@ struct EnquiryItem: Decodable, Identifiable, Hashable {
     let createdAt: String?
     let updatedAt: String?
 }
+
+struct InspectionItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let propertyId: UUID
+    let propertyName: String?
+    let unitId: UUID?
+    let unitNumber: String?
+    let inspectorEmployeeId: UUID?
+    let inspectorEmployeeName: String?
+    let inspectionType: String
+    let inspectionDate: String?
+    let notes: String?
+    let status: String
+    let createdAt: String?
+    let updatedAt: String?
+}
+
+struct TenantVerificationItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let tenantUserId: UUID
+    let tenantName: String?
+    let status: String
+    let permanentAddress: String?
+    let permanentLocality: String?
+    let permanentCity: String?
+    let permanentState: String?
+    let permanentPincode: String?
+    let identityRequirementMet: Bool?
+    let submittedAt: String?
+    let createdAt: String?
+    let updatedAt: String?
+
+    var locationLine: String {
+        [permanentLocality, permanentCity, permanentPincode]
+            .compactMap { $0 }
+            .filter { !$0.isEmpty }
+            .joined(separator: " · ")
+    }
+}
+
+struct UnitListRow: Identifiable, Hashable {
+    let id: UUID
+    let propertyName: String
+    let unit: UnitItem
+}
