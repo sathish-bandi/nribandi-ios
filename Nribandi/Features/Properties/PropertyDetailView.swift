@@ -628,7 +628,7 @@ private struct AddUnitSheet: View {
     var onSaved: () async -> Void
 
     @State private var floors: [FloorItem]
-    @State private var selectedFloorId: UUID?
+    @State private var selectedFloorIds: Set<UUID> = []
     @State private var unitNumber = ""
     @State private var unitType: UnitTypeOption = .TWO_BHK
     @State private var errorMessage: String?
@@ -639,8 +639,9 @@ private struct AddUnitSheet: View {
         self.propertyId = propertyId
         self.initialFloors = initialFloors
         self.onSaved = onSaved
-        _floors = State(initialValue: Self.sortedFloors(initialFloors))
-        _selectedFloorId = State(initialValue: Self.sortedFloors(initialFloors).first?.id)
+        let sorted = Self.sortedFloors(initialFloors)
+        _floors = State(initialValue: sorted)
+        _selectedFloorIds = State(initialValue: Set(sorted.prefix(1).map(\.id)))
     }
 
     private static let commonLayouts: [UnitTypeOption] = [.ONE_BHK, .TWO_BHK, .THREE_BHK, .FOUR_BHK]
@@ -667,23 +668,41 @@ private struct AddUnitSheet: View {
                     if isLoadingFloors && floors.isEmpty {
                         ProgressView("Loading floors…")
                     } else if floors.isEmpty {
-                        Text("No floors on this property yet. Create the property with a floor count, or add a floor first.")
+                        Text("No floors on this property yet. Edit the property floor count, or add a floor first.")
                             .foregroundStyle(NriTheme.terracotta)
                     } else {
-                        Picker("Floor", selection: $selectedFloorId) {
-                            Text("Select floor").tag(Optional<UUID>.none)
-                            ForEach(sortedFloors) { floor in
-                                Text(floorPickerLabel(floor)).tag(Optional(floor.id))
+                        ForEach(sortedFloors) { floor in
+                            Button {
+                                toggleFloor(floor.id)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: selectedFloorIds.contains(floor.id)
+                                          ? "checkmark.square.fill"
+                                          : "square")
+                                        .foregroundStyle(
+                                            selectedFloorIds.contains(floor.id) ? NriTheme.teal : NriTheme.slate
+                                        )
+                                        .font(.title3)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(floorPickerLabel(floor))
+                                            .foregroundStyle(NriTheme.ink)
+                                        Text("Tick to place this unit on this floor")
+                                            .font(.caption2)
+                                            .foregroundStyle(NriTheme.slate)
+                                    }
+                                    Spacer(minLength: 0)
+                                }
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.borderless)
                         }
-                        Text("\(sortedFloors.count) floor\(sortedFloors.count == 1 ? "" : "s") available")
-                            .font(.footnote)
-                            .foregroundStyle(NriTheme.slate)
                     }
-                    TextField("Unit number (e.g. 201)", text: $unitNumber)
+                    TextField("Unit number (e.g. 101)", text: $unitNumber)
                         .textInputAutocapitalization(.characters)
                 } header: {
-                    Text("Location")
+                    Text("Floors")
+                } footer: {
+                    Text("Select every floor that should get this unit number and BHK. Example: tick Floor 1 for a 2 BHK and Floor 2 for a different 3 BHK in a second save.")
                 }
 
                 Section {
@@ -716,7 +735,7 @@ private struct AddUnitSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { Task { await save() } }
-                        .disabled(isSaving || floors.isEmpty)
+                        .disabled(isSaving || floors.isEmpty || selectedFloorIds.isEmpty)
                 }
             }
             .task { await refreshFloors() }
@@ -728,6 +747,14 @@ private struct AddUnitSheet: View {
             return "Block \(block) · Floor \(floor.floorNumber)"
         }
         return "Floor \(floor.floorNumber)"
+    }
+
+    private func toggleFloor(_ id: UUID) {
+        if selectedFloorIds.contains(id) {
+            selectedFloorIds.remove(id)
+        } else {
+            selectedFloorIds.insert(id)
+        }
     }
 
     @ViewBuilder
@@ -755,8 +782,9 @@ private struct AddUnitSheet: View {
         do {
             let loaded = try await appState.api.floors(propertyId: propertyId)
             floors = Self.sortedFloors(loaded)
-            if selectedFloorId == nil || !floors.contains(where: { $0.id == selectedFloorId }) {
-                selectedFloorId = floors.first?.id
+            selectedFloorIds = selectedFloorIds.filter { id in floors.contains(where: { $0.id == id }) }
+            if selectedFloorIds.isEmpty, let first = floors.first?.id {
+                selectedFloorIds = [first]
             }
         } catch {
             if floors.isEmpty {
@@ -770,8 +798,9 @@ private struct AddUnitSheet: View {
             errorMessage = "Add a floor before creating units."
             return
         }
-        guard let selectedFloorId else {
-            errorMessage = "Select the floor this unit belongs to."
+        let floorIds = Array(selectedFloorIds)
+        guard !floorIds.isEmpty else {
+            errorMessage = "Tick at least one floor for this unit."
             return
         }
         let trimmed = unitNumber.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -783,15 +812,16 @@ private struct AddUnitSheet: View {
         errorMessage = nil
         defer { isSaving = false }
         do {
-            // unitType.rawValue is TWO_BHK / THREE_BHK — matches backend UnitType enum.
-            _ = try await appState.api.createUnit(
-                propertyId: propertyId,
-                CreateUnitBody(
-                    floorId: selectedFloorId,
-                    unitNumber: trimmed,
-                    unitType: unitType.rawValue
+            for floorId in floorIds {
+                _ = try await appState.api.createUnit(
+                    propertyId: propertyId,
+                    CreateUnitBody(
+                        floorId: floorId,
+                        unitNumber: trimmed,
+                        unitType: unitType.rawValue
+                    )
                 )
-            )
+            }
             await onSaved()
             dismiss()
         } catch {

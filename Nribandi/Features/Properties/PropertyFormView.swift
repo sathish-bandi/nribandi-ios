@@ -65,10 +65,16 @@ struct PropertyFormView: View {
                 } header: {
                     Text("Property")
                 } footer: {
-                    if propertyType.usesBlocks {
-                        Text("Saving creates Block A and floors 1…\(numberOfFloors). Add more towers if needed, then add units and map each to a BHK layout.")
+                    if isCreate {
+                        if propertyType.usesBlocks {
+                            Text("Saving creates Block A and floors 1…\(numberOfFloors). Then tick floors when adding units and choose each unit’s BHK.")
+                        } else {
+                            Text("Saving creates floors 1…\(numberOfFloors). Then tick floors when adding units and choose each unit’s BHK.")
+                        }
+                    } else if propertyType.usesBlocks {
+                        Text("Changing structure floors adds or removes Block A floors 1…\(numberOfFloors). Floors that still have units cannot be removed.")
                     } else {
-                        Text("Saving creates floors 1…\(numberOfFloors). Then add units and map each to a BHK layout.")
+                        Text("Changing structure floors adds or removes floors 1…\(numberOfFloors). Floors that still have units cannot be removed.")
                     }
                 }
 
