@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct ServiceRequestsView: View {
@@ -301,22 +302,30 @@ struct ServiceRequestDetailView: View {
 
     @State private var item: ServiceRequestItem?
     @State private var history: [ServiceRequestHistoryItem] = []
+    @State private var attachments: [ServiceRequestAttachmentItem] = []
     @State private var errorMessage: String?
     @State private var isLoading = true
     @State private var isCancelling = false
+    @State private var isUploading = false
     @State private var showCancelConfirm = false
     @State private var showAssign = false
     @State private var showUpdateStatus = false
+    @State private var photoItem: PhotosPickerItem?
 
     private var canCancel: Bool {
         guard let item, item.canCancel else { return false }
         let role = session.user?.role
-        return role == .OWNER || role == .TENANT
+        return role == .OWNER || role == .TENANT || role == .ADMIN
     }
 
     private var canStaffAct: Bool {
         let role = session.user?.role
         return role == .ADMIN || role == .EMPLOYEE
+    }
+
+    private var canAttach: Bool {
+        let role = session.user?.role
+        return role == .ADMIN || role == .EMPLOYEE || role == .OWNER
     }
 
     var body: some View {
@@ -354,6 +363,37 @@ struct ServiceRequestDetailView: View {
                         }
                     }
 
+                    Section {
+                        if attachments.isEmpty {
+                            Text("No photos attached yet.")
+                                .foregroundStyle(NriTheme.slate)
+                        } else {
+                            ForEach(attachments) { attachment in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(attachment.originalFilename ?? "Attachment")
+                                        .font(.subheadline.weight(.semibold))
+                                    if let name = attachment.uploadedByName {
+                                        Text("By \(name)")
+                                            .font(.caption)
+                                            .foregroundStyle(NriTheme.slate)
+                                    }
+                                }
+                            }
+                        }
+                        if canAttach {
+                            PhotosPicker(selection: $photoItem, matching: .images) {
+                                Label(isUploading ? "Uploading…" : "Add photo", systemImage: "photo.badge.plus")
+                            }
+                            .disabled(isUploading)
+                            .onChange(of: photoItem) { _, newItem in
+                                guard let newItem else { return }
+                                Task { await uploadAttachment(newItem) }
+                            }
+                        }
+                    } header: {
+                        Text("Attachments")
+                    }
+
                     if !history.isEmpty {
                         Section("Status history") {
                             ForEach(history) { event in
@@ -386,7 +426,11 @@ struct ServiceRequestDetailView: View {
                             }
                             .disabled(isCancelling)
                         } footer: {
-                            Text("You can cancel while the request is still open or in progress.")
+                            Text(
+                                session.user?.role == .ADMIN
+                                    ? "Admins can cancel open or in-progress requests."
+                                    : "You can cancel while the request is still open or in progress."
+                            )
                         }
                     }
 
@@ -436,8 +480,10 @@ struct ServiceRequestDetailView: View {
         do {
             async let detail = appState.api.serviceRequest(id: requestId)
             async let events = appState.api.serviceRequestHistory(id: requestId)
+            async let files = appState.api.serviceRequestAttachments(id: requestId)
             item = try await detail
             history = try await events
+            attachments = (try? await files) ?? []
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -450,6 +496,31 @@ struct ServiceRequestDetailView: View {
         do {
             item = try await appState.api.cancelServiceRequest(id: requestId)
             history = try await appState.api.serviceRequestHistory(id: requestId)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func uploadAttachment(_ pickerItem: PhotosPickerItem) async {
+        isUploading = true
+        errorMessage = nil
+        defer {
+            isUploading = false
+            photoItem = nil
+        }
+        do {
+            guard let data = try await pickerItem.loadTransferable(type: Data.self) else {
+                errorMessage = "Could not read the selected photo."
+                return
+            }
+            let mime = pickerItem.supportedContentTypes.first?.preferredMIMEType ?? "image/jpeg"
+            let uploaded = try await appState.api.uploadServiceRequestAttachment(
+                id: requestId,
+                fileData: data,
+                fileName: "sr-\(UUID().uuidString.prefix(8)).jpg",
+                mimeType: mime
+            )
+            attachments.insert(uploaded, at: 0)
         } catch {
             errorMessage = error.localizedDescription
         }

@@ -51,6 +51,37 @@ final class APIClient {
         )
     }
 
+    /// Always succeeds with a generic message when the email may or may not exist.
+    @discardableResult
+    func forgotPassword(email: String) async throws -> String {
+        try await sendMessage(
+            method: "POST",
+            path: "/api/v1/auth/forgot-password",
+            body: ForgotPasswordRequest(email: email),
+            authorized: false
+        )
+    }
+
+    @discardableResult
+    func resetPassword(token: String, newPassword: String) async throws -> String {
+        try await sendMessage(
+            method: "POST",
+            path: "/api/v1/auth/reset-password",
+            body: ResetPasswordRequest(token: token, newPassword: newPassword),
+            authorized: false
+        )
+    }
+
+    @discardableResult
+    func changePassword(currentPassword: String, newPassword: String) async throws -> String {
+        try await sendMessage(
+            method: "POST",
+            path: "/api/v1/users/me/change-password",
+            body: ChangePasswordRequest(currentPassword: currentPassword, newPassword: newPassword),
+            authorized: true
+        )
+    }
+
     func dashboardSummary() async throws -> DashboardSummary {
         try await send(
             method: "GET",
@@ -215,6 +246,51 @@ final class APIClient {
         )
     }
 
+    @discardableResult
+    func deleteProperty(id: UUID) async throws -> PropertyItem {
+        try await send(
+            method: "DELETE",
+            path: "/api/v1/properties/\(id.uuidString.lowercased())",
+            body: Optional<String>.none,
+            authorized: true,
+            as: PropertyItem.self
+        )
+    }
+
+    func propertyAttachments(propertyId: UUID) async throws -> [PropertyAttachmentItem] {
+        try await send(
+            method: "GET",
+            path: "/api/v1/properties/\(propertyId.uuidString.lowercased())/attachments",
+            body: Optional<String>.none,
+            authorized: true,
+            as: [PropertyAttachmentItem].self
+        )
+    }
+
+    func uploadPropertyAttachment(
+        propertyId: UUID,
+        fileData: Data,
+        fileName: String,
+        mimeType: String
+    ) async throws -> PropertyAttachmentItem {
+        try await uploadMultipart(
+            path: "/api/v1/properties/\(propertyId.uuidString.lowercased())/attachments",
+            fileData: fileData,
+            fileName: fileName,
+            mimeType: mimeType,
+            as: PropertyAttachmentItem.self
+        )
+    }
+
+    func deletePropertyAttachment(propertyId: UUID, attachmentId: UUID) async throws {
+        _ = try await sendMessage(
+            method: "DELETE",
+            path: "/api/v1/properties/\(propertyId.uuidString.lowercased())/attachments/\(attachmentId.uuidString.lowercased())",
+            body: Optional<String>.none,
+            authorized: true
+        )
+    }
+
     func users(role: String? = nil, page: Int = 0, size: Int = 50) async throws -> PageResponse<ManagedUserItem> {
         var path = "/api/v1/users?page=\(page)&size=\(size)"
         if let role, !role.isEmpty {
@@ -321,6 +397,16 @@ final class APIClient {
         )
     }
 
+    func updateUnit(unitId: UUID, _ body: UpdateUnitBody) async throws -> UnitItem {
+        try await send(
+            method: "PATCH",
+            path: "/api/v1/units/\(unitId.uuidString.lowercased())",
+            body: body,
+            authorized: true,
+            as: UnitItem.self
+        )
+    }
+
     // MARK: - Tenancies
 
     func tenancies(unitId: UUID) async throws -> [TenancyItem] {
@@ -372,6 +458,31 @@ final class APIClient {
             body: body,
             authorized: true,
             as: ServiceRequestItem.self
+        )
+    }
+
+    func serviceRequestAttachments(id: UUID) async throws -> [ServiceRequestAttachmentItem] {
+        try await send(
+            method: "GET",
+            path: "/api/v1/service-requests/\(id.uuidString.lowercased())/attachments",
+            body: Optional<String>.none,
+            authorized: true,
+            as: [ServiceRequestAttachmentItem].self
+        )
+    }
+
+    func uploadServiceRequestAttachment(
+        id: UUID,
+        fileData: Data,
+        fileName: String,
+        mimeType: String
+    ) async throws -> ServiceRequestAttachmentItem {
+        try await uploadMultipart(
+            path: "/api/v1/service-requests/\(id.uuidString.lowercased())/attachments",
+            fileData: fileData,
+            fileName: fileName,
+            mimeType: mimeType,
+            as: ServiceRequestAttachmentItem.self
         )
     }
 
@@ -533,15 +644,33 @@ final class APIClient {
         )
     }
 
-    /// Document upload (multipart). Follow-up: wire PhotosPicker/file picker in KYC UI when needed.
+    /// Document upload (multipart). Returns the uploaded document metadata.
     func uploadTenantVerificationDocument(
         tenantUserId: UUID,
         documentType: String,
         fileData: Data,
         fileName: String,
         mimeType: String
-    ) async throws -> TenantVerificationItem {
-        let path = "/api/v1/tenants/\(tenantUserId.uuidString.lowercased())/verification/documents?documentType=\(documentType)"
+    ) async throws -> TenantVerificationDocumentItem {
+        let encodedType = documentType.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? documentType
+        return try await uploadMultipart(
+            path: "/api/v1/tenants/\(tenantUserId.uuidString.lowercased())/verification/documents?documentType=\(encodedType)",
+            fileData: fileData,
+            fileName: fileName,
+            mimeType: mimeType,
+            as: TenantVerificationDocumentItem.self
+        )
+    }
+
+    // MARK: - Internals
+
+    private func uploadMultipart<Response: Decodable>(
+        path: String,
+        fileData: Data,
+        fileName: String,
+        mimeType: String,
+        as _: Response.Type
+    ) async throws -> Response {
         guard let url = URL(string: path, relativeTo: environment.apiBaseURL)?.absoluteURL else {
             throw APIError.invalidURL
         }
@@ -556,11 +685,18 @@ final class APIClient {
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
         var body = Data()
-        body.append("--\(boundary)\r\n".data(using: .utf8)!)
-        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8)!)
-        body.append("Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8)!)
-        body.append(fileData)
-        body.append("\r\n--\(boundary)--\r\n".data(using: .utf8)!)
+        if let preamble = "--\(boundary)\r\n".data(using: .utf8),
+           let disposition = "Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".data(using: .utf8),
+           let contentType = "Content-Type: \(mimeType)\r\n\r\n".data(using: .utf8),
+           let closing = "\r\n--\(boundary)--\r\n".data(using: .utf8) {
+            body.append(preamble)
+            body.append(disposition)
+            body.append(contentType)
+            body.append(fileData)
+            body.append(closing)
+        } else {
+            throw APIError.transport("Could not build upload body.")
+        }
         request.httpBody = body
 
         let data: Data
@@ -580,14 +716,89 @@ final class APIClient {
             throw APIError.http(status: http.statusCode, code: nil, message: "Upload failed (\(http.statusCode)).")
         }
         do {
-            let envelope = try JSONDecoder().decode(ApiResponse<TenantVerificationItem>.self, from: data)
+            let envelope = try JSONDecoder().decode(ApiResponse<Response>.self, from: data)
             if let value = envelope.data { return value }
             throw APIError.emptyData
         } catch let api as APIError {
             throw api
         } catch {
-            return try JSONDecoder().decode(TenantVerificationItem.self, from: data)
+            return try JSONDecoder().decode(Response.self, from: data)
         }
+    }
+
+    /// Message-only endpoints (`ApiResponse` with null data).
+    private func sendMessage<Body: Encodable>(
+        method: String,
+        path: String,
+        body: Body?,
+        authorized: Bool,
+        retryOnUnauthorized: Bool = true
+    ) async throws -> String {
+        guard let url = URL(string: path, relativeTo: environment.apiBaseURL)?.absoluteURL else {
+            throw APIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        if body != nil {
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            request.httpBody = try JSONEncoder().encode(body)
+        }
+
+        if authorized {
+            guard let token = sessionStore?.accessToken, !token.isEmpty else {
+                throw APIError.unauthorized
+            }
+            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        }
+
+        let data: Data
+        let response: URLResponse
+        do {
+            (data, response) = try await urlSession.data(for: request)
+        } catch {
+            throw APIError.transport(Self.friendlyTransport(error, baseURL: environment.apiBaseURL))
+        }
+
+        guard let http = response as? HTTPURLResponse else {
+            throw APIError.transport("Unexpected response from server.")
+        }
+
+        if http.statusCode == 401, authorized, retryOnUnauthorized {
+            let ok = await sessionStore?.refreshIfNeeded(using: self) ?? false
+            if ok {
+                return try await sendMessage(
+                    method: method,
+                    path: path,
+                    body: body,
+                    authorized: authorized,
+                    retryOnUnauthorized: false
+                )
+            }
+            throw APIError.unauthorized
+        }
+
+        guard (200..<300).contains(http.statusCode) else {
+            if let err = try? JSONDecoder().decode(ApiErrorResponse.self, from: data) {
+                throw APIError.fromApiError(err, status: http.statusCode)
+            }
+            throw APIError.http(status: http.statusCode, code: nil, message: "Request failed (\(http.statusCode)).")
+        }
+
+        if let envelope = try? JSONDecoder().decode(ApiResponse<String?>.self, from: data),
+           let message = envelope.message, !message.isEmpty {
+            return message
+        }
+        struct MessageOnly: Decodable {
+            let message: String?
+            let success: Bool?
+        }
+        if let parsed = try? JSONDecoder().decode(MessageOnly.self, from: data),
+           let message = parsed.message, !message.isEmpty {
+            return message
+        }
+        return "Done."
     }
 
     private func send<Body: Encodable, Response: Decodable>(

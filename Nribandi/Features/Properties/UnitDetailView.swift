@@ -12,6 +12,7 @@ struct UnitDetailView: View {
     @State private var isLoading = true
     @State private var showAssignTenancy = false
     @State private var showUpdateStatus = false
+    @State private var showEditDefinition = false
     @State private var endingTenancyId: UUID?
     @State private var moveOutDate = Date()
 
@@ -29,6 +30,10 @@ struct UnitDetailView: View {
         session.user?.role == .ADMIN || session.user?.role == .OWNER
     }
 
+    private var canEditDefinition: Bool {
+        session.user?.role == .ADMIN
+    }
+
     private var activeTenancy: TenancyItem? {
         tenancies.first(where: \.active)
     }
@@ -44,7 +49,7 @@ struct UnitDetailView: View {
                 if let floor = unit.floorNumber {
                     LabeledContent("Floor", value: "\(floor)")
                 }
-                LabeledContent("Type", value: UnitTypeDisplay.title(for: unit.unitType))
+                StatusChip(text: UnitTypeDisplay.title(for: unit.unitType), emphasized: true)
                 HStack {
                     StatusChip(text: unit.occupancyStatus)
                     StatusChip(text: unit.toLetBoardStatus)
@@ -90,6 +95,14 @@ struct UnitDetailView: View {
                 }
             }
 
+            if canEditDefinition {
+                Section {
+                    Button("Edit unit number / BHK") { showEditDefinition = true }
+                } footer: {
+                    Text("Admins can correct the unit number or BHK layout.")
+                }
+            }
+
             if canUpdateStatus {
                 Section {
                     Button("Update occupancy / to-let board") { showUpdateStatus = true }
@@ -111,6 +124,11 @@ struct UnitDetailView: View {
         }
         .sheet(isPresented: $showUpdateStatus) {
             UpdateUnitStatusSheet(unit: unit) { updated in
+                unit = updated
+            }
+        }
+        .sheet(isPresented: $showEditDefinition) {
+            EditUnitDefinitionSheet(unit: unit) { updated in
                 unit = updated
             }
         }
@@ -362,6 +380,88 @@ private struct UpdateUnitStatusSheet: View {
                     occupancyStatus: occupancy.rawValue,
                     toLetBoardStatus: toLet.rawValue
                 )
+            )
+            onSaved(updated)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct EditUnitDefinitionSheet: View {
+    @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
+
+    let unit: UnitItem
+    var onSaved: (UnitItem) -> Void
+
+    @State private var unitNumber: String
+    @State private var unitType: UnitTypeOption
+    @State private var errorMessage: String?
+    @State private var isSaving = false
+
+    init(unit: UnitItem, onSaved: @escaping (UnitItem) -> Void) {
+        self.unit = unit
+        self.onSaved = onSaved
+        _unitNumber = State(initialValue: unit.unitNumber)
+        _unitType = State(initialValue: UnitTypeOption(rawValue: unit.unitType) ?? .TWO_BHK)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Unit") {
+                    TextField("Unit number", text: $unitNumber)
+                        .textInputAutocapitalization(.characters)
+                }
+                Section("BHK layout") {
+                    ForEach(UnitTypeOption.pickerCases) { option in
+                        Button {
+                            unitType = option
+                        } label: {
+                            HStack {
+                                Text(option.title).foregroundStyle(NriTheme.ink)
+                                Spacer()
+                                if unitType == option {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(NriTheme.teal)
+                                }
+                            }
+                        }
+                    }
+                } footer: {
+                    Text("Selected: \(unitType.title)")
+                }
+                if let errorMessage {
+                    Section { Text(errorMessage).foregroundStyle(NriTheme.terracotta) }
+                }
+            }
+            .navigationTitle("Edit unit")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { Task { await save() } }
+                        .disabled(isSaving)
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        let trimmed = unitNumber.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            errorMessage = "Unit number is required."
+            return
+        }
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+        do {
+            let updated = try await appState.api.updateUnit(
+                unitId: unit.id,
+                UpdateUnitBody(unitNumber: trimmed, unitType: unitType.rawValue)
             )
             onSaved(updated)
             dismiss()

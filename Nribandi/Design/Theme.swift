@@ -2,16 +2,37 @@ import Foundation
 import SwiftUI
 
 enum NriTheme {
-    static let ink = Color(red: 0.10, green: 0.14, blue: 0.18)
-    static let slate = Color(red: 0.35, green: 0.40, blue: 0.45)
-    static let sand = Color(red: 0.96, green: 0.94, blue: 0.90)
-    static let mist = Color(red: 0.93, green: 0.95, blue: 0.94)
-    static let teal = Color(red: 0.07, green: 0.45, blue: 0.48)
-    static let terracotta = Color(red: 0.72, green: 0.35, blue: 0.24)
-    static let leaf = Color(red: 0.22, green: 0.55, blue: 0.38)
-    static let local = Color(red: 0.07, green: 0.45, blue: 0.48)
-    static let test = Color(red: 0.75, green: 0.48, blue: 0.12)
-    static let prod = Color(red: 0.55, green: 0.18, blue: 0.22)
+    /// Charcoal body text
+    static let ink = Color(red: 0.12, green: 0.14, blue: 0.16)
+    /// Secondary / muted
+    static let slate = Color(red: 0.38, green: 0.42, blue: 0.44)
+    /// Warm stone surface (not cream cliché)
+    static let sand = Color(red: 0.95, green: 0.94, blue: 0.92)
+    /// Soft sage mist panels
+    static let mist = Color(red: 0.93, green: 0.95, blue: 0.93)
+    /// Deep teal / emerald primary — rental marketplace
+    static let teal = Color(red: 0.04, green: 0.42, blue: 0.36)
+    /// Soft sage accent
+    static let sage = Color(red: 0.66, green: 0.77, blue: 0.71)
+    /// Emerald leaf for positive states
+    static let leaf = Color(red: 0.18, green: 0.52, blue: 0.40)
+    /// Warm alert (not terracotta brand accent)
+    static let terracotta = Color(red: 0.70, green: 0.32, blue: 0.28)
+    static let local = Color(red: 0.04, green: 0.42, blue: 0.36)
+    static let test = Color(red: 0.72, green: 0.50, blue: 0.14)
+    static let prod = Color(red: 0.50, green: 0.20, blue: 0.24)
+
+    static var pageBackground: LinearGradient {
+        LinearGradient(
+            colors: [
+                Color(red: 0.97, green: 0.97, blue: 0.96),
+                Color(red: 0.92, green: 0.95, blue: 0.93),
+                Color(red: 0.95, green: 0.94, blue: 0.91)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
 }
 
 enum NriFormat {
@@ -78,13 +99,15 @@ struct MetricCard: View {
 
 struct StatusChip: View {
     let text: String
+    var emphasized: Bool = false
+
     var body: some View {
         Text(text.replacingOccurrences(of: "_", with: " "))
             .font(.caption2.weight(.semibold))
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .foregroundStyle(NriTheme.ink)
-            .background(NriTheme.sand, in: Capsule())
+            .foregroundStyle(emphasized ? .white : NriTheme.ink)
+            .background(emphasized ? NriTheme.teal : NriTheme.sand, in: Capsule())
     }
 }
 

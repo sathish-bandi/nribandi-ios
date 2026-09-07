@@ -1,19 +1,28 @@
+import PhotosUI
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct PropertyDetailView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var session: SessionStore
+    @Environment(\.dismiss) private var dismiss
 
     @State private var property: PropertyItem
     @State private var units: [UnitItem] = []
     @State private var blocks: [BlockItem] = []
     @State private var floors: [FloorItem] = []
+    @State private var attachments: [PropertyAttachmentItem] = []
     @State private var errorMessage: String?
     @State private var isLoading = true
     @State private var showEdit = false
     @State private var showAddBlock = false
     @State private var showAddFloor = false
     @State private var showAddUnit = false
+    @State private var showDeleteConfirm = false
+    @State private var isDeleting = false
+    @State private var isUploadingMedia = false
+    @State private var photoItems: [PhotosPickerItem] = []
+    @State private var showFileImporter = false
 
     init(property: PropertyItem) {
         _property = State(initialValue: property)
@@ -21,6 +30,11 @@ struct PropertyDetailView: View {
 
     private var canManageStructure: Bool {
         session.user?.role == .ADMIN
+    }
+
+    private var canViewMedia: Bool {
+        let role = session.user?.role
+        return role == .ADMIN || role == .OWNER || role == .EMPLOYEE
     }
 
     private var usesBlocks: Bool {
@@ -44,6 +58,61 @@ struct PropertyDetailView: View {
                     .foregroundStyle(NriTheme.slate)
                 if let ownerName = property.ownerName {
                     Text("Owner: \(ownerName)").font(.footnote).foregroundStyle(NriTheme.slate)
+                }
+                if property.isActive == false {
+                    StatusChip(text: "INACTIVE")
+                }
+            }
+
+            if canViewMedia {
+                Section {
+                    if attachments.isEmpty {
+                        Text("No photos or videos yet.")
+                            .foregroundStyle(NriTheme.slate)
+                    } else {
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 12) {
+                                ForEach(attachments) { attachment in
+                                    PropertyAttachmentThumb(
+                                        attachment: attachment,
+                                        canDelete: canManageStructure,
+                                        onDelete: {
+                                            Task { await deleteAttachment(attachment) }
+                                        }
+                                    )
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                    }
+
+                    if canManageStructure {
+                        PhotosPicker(
+                            selection: $photoItems,
+                            maxSelectionCount: 6,
+                            matching: .any(of: [.images, .videos])
+                        ) {
+                            Label(isUploadingMedia ? "Uploading…" : "Add photos / videos", systemImage: "photo.on.rectangle")
+                        }
+                        .disabled(isUploadingMedia)
+                        .onChange(of: photoItems) { _, newItems in
+                            guard !newItems.isEmpty else { return }
+                            Task { await uploadPhotoItems(newItems) }
+                        }
+
+                        Button {
+                            showFileImporter = true
+                        } label: {
+                            Label("Import file", systemImage: "folder")
+                        }
+                        .disabled(isUploadingMedia)
+                    }
+                } header: {
+                    Text("Gallery")
+                } footer: {
+                    if canManageStructure {
+                        Text("Admins can upload images or videos for listings and walkthroughs.")
+                    }
                 }
             }
 
@@ -87,10 +156,10 @@ struct PropertyDetailView: View {
                         NavigationLink {
                             UnitDetailView(unit: unit, propertyName: property.name)
                         } label: {
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading, spacing: 6) {
                                 Text(unit.title).font(.subheadline.weight(.semibold))
+                                StatusChip(text: UnitTypeDisplay.title(for: unit.unitType), emphasized: true)
                                 HStack {
-                                    StatusChip(text: UnitTypeDisplay.title(for: unit.unitType))
                                     StatusChip(text: unit.occupancyStatus)
                                     StatusChip(text: unit.toLetBoardStatus)
                                 }
@@ -98,6 +167,17 @@ struct PropertyDetailView: View {
                             .padding(.vertical, 2)
                         }
                     }
+                }
+            }
+
+            if canManageStructure {
+                Section {
+                    Button("Delete property", role: .destructive) {
+                        showDeleteConfirm = true
+                    }
+                    .disabled(isDeleting || property.isActive == false)
+                } footer: {
+                    Text("Soft-deletes the property (marks inactive). Related tenancies and tickets stay intact.")
                 }
             }
         }
@@ -113,6 +193,8 @@ struct PropertyDetailView: View {
                         }
                         Button("Add floor") { showAddFloor = true }
                         Button("Add unit (BHK)") { showAddUnit = true }
+                        Divider()
+                        Button("Delete property", role: .destructive) { showDeleteConfirm = true }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
@@ -142,6 +224,25 @@ struct PropertyDetailView: View {
                 await reload()
             }
         }
+        .fileImporter(
+            isPresented: $showFileImporter,
+            allowedContentTypes: [.image, .movie, .mpeg4Movie, .quickTimeMovie, .jpeg, .png, .heic],
+            allowsMultipleSelection: false
+        ) { result in
+            Task { await handleImportedFile(result) }
+        }
+        .confirmationDialog(
+            "Delete this property?",
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Delete property", role: .destructive) {
+                Task { await softDelete() }
+            }
+            Button("Keep property", role: .cancel) {}
+        } message: {
+            Text("The property will be marked inactive and hidden from active listings.")
+        }
         .task { await reload() }
         .refreshable { await reload() }
     }
@@ -165,11 +266,142 @@ struct PropertyDetailView: View {
             async let loadedUnits = appState.api.units(propertyId: property.id)
             async let loadedBlocks = appState.api.blocks(propertyId: property.id)
             async let loadedFloors = appState.api.floors(propertyId: property.id)
+            async let loadedAttachments = appState.api.propertyAttachments(propertyId: property.id)
             units = try await loadedUnits
             blocks = (try? await loadedBlocks) ?? []
             floors = (try? await loadedFloors) ?? []
+            if canViewMedia {
+                attachments = (try? await loadedAttachments) ?? []
+            }
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    private func softDelete() async {
+        isDeleting = true
+        errorMessage = nil
+        defer { isDeleting = false }
+        do {
+            property = try await appState.api.deleteProperty(id: property.id)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func deleteAttachment(_ attachment: PropertyAttachmentItem) async {
+        do {
+            try await appState.api.deletePropertyAttachment(propertyId: property.id, attachmentId: attachment.id)
+            attachments.removeAll { $0.id == attachment.id }
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func uploadPhotoItems(_ items: [PhotosPickerItem]) async {
+        isUploadingMedia = true
+        defer {
+            isUploadingMedia = false
+            photoItems = []
+        }
+        for item in items {
+            do {
+                guard let data = try await item.loadTransferable(type: Data.self) else { continue }
+                let mime = Self.guessMime(for: item, data: data)
+                let name = "property-\(UUID().uuidString.prefix(8)).\(Self.fileExtension(for: mime))"
+                let uploaded = try await appState.api.uploadPropertyAttachment(
+                    propertyId: property.id,
+                    fileData: data,
+                    fileName: name,
+                    mimeType: mime
+                )
+                attachments.insert(uploaded, at: 0)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func handleImportedFile(_ result: Result<[URL], Error>) async {
+        switch result {
+        case .failure(let error):
+            errorMessage = error.localizedDescription
+        case .success(let urls):
+            guard let url = urls.first else { return }
+            isUploadingMedia = true
+            defer { isUploadingMedia = false }
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer { if accessed { url.stopAccessingSecurityScopedResource() } }
+            do {
+                let data = try Data(contentsOf: url)
+                let mime = Self.mimeType(for: url) ?? "application/octet-stream"
+                let uploaded = try await appState.api.uploadPropertyAttachment(
+                    propertyId: property.id,
+                    fileData: data,
+                    fileName: url.lastPathComponent,
+                    mimeType: mime
+                )
+                attachments.insert(uploaded, at: 0)
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private static func guessMime(for item: PhotosPickerItem, data: Data) -> String {
+        if let type = item.supportedContentTypes.first?.preferredMIMEType {
+            return type
+        }
+        if data.starts(with: [0xFF, 0xD8, 0xFF]) { return "image/jpeg" }
+        if data.starts(with: [0x89, 0x50, 0x4E, 0x47]) { return "image/png" }
+        return "image/jpeg"
+    }
+
+    private static func fileExtension(for mime: String) -> String {
+        switch mime {
+        case "image/png": return "png"
+        case "image/heic": return "heic"
+        case "video/mp4": return "mp4"
+        case "video/quicktime": return "mov"
+        default: return "jpg"
+        }
+    }
+
+    private static func mimeType(for url: URL) -> String? {
+        UTType(filenameExtension: url.pathExtension)?.preferredMIMEType
+    }
+}
+
+private struct PropertyAttachmentThumb: View {
+    let attachment: PropertyAttachmentItem
+    let canDelete: Bool
+    var onDelete: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(NriTheme.mist)
+                    .frame(width: 120, height: 90)
+                if attachment.isVideo {
+                    Image(systemName: "video.fill")
+                        .font(.title2)
+                        .foregroundStyle(NriTheme.teal)
+                } else {
+                    Image(systemName: "photo")
+                        .font(.title2)
+                        .foregroundStyle(NriTheme.teal)
+                }
+            }
+            Text(attachment.originalFilename ?? "Media")
+                .font(.caption2)
+                .lineLimit(1)
+                .frame(width: 120, alignment: .leading)
+            if canDelete {
+                Button("Delete", role: .destructive, action: onDelete)
+                    .font(.caption2)
+            }
         }
     }
 }

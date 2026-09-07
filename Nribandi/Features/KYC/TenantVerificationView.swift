@@ -1,7 +1,8 @@
+import PhotosUI
 import SwiftUI
+import UniformTypeIdentifiers
 
-/// Tenant self-service KYC and staff review.
-/// Follow-up: wire PhotosPicker / document upload via `uploadTenantVerificationDocument` when product needs ID scans.
+/// Tenant self-service KYC and staff review, including identity document upload.
 struct TenantVerificationView: View {
     @EnvironmentObject private var appState: AppState
     @EnvironmentObject private var session: SessionStore
@@ -18,9 +19,13 @@ struct TenantVerificationView: View {
     @State private var state = ""
     @State private var pincode = ""
     @State private var reviewNotes = ""
+    @State private var idProofMatchedAddress = false
+    @State private var documentType: IdDocumentTypeOption = .AADHAAR
+    @State private var photoItem: PhotosPickerItem?
     @State private var errorMessage: String?
     @State private var isLoading = true
     @State private var isSaving = false
+    @State private var isUploading = false
 
     private var resolvedTenantId: UUID? {
         tenantUserId ?? session.user?.id
@@ -28,6 +33,23 @@ struct TenantVerificationView: View {
 
     private var canEditAddress: Bool {
         !reviewMode && (session.user?.role == .TENANT || session.user?.role == .ADMIN)
+    }
+
+    private var canUploadDocs: Bool {
+        !reviewMode && (session.user?.role == .TENANT || session.user?.role == .ADMIN)
+    }
+
+    private var documents: [TenantVerificationDocumentItem] {
+        item?.documents ?? []
+    }
+
+    private var canSubmit: Bool {
+        guard let item else { return false }
+        let addressOk = canSaveAddress || item.hasPermanentAddress
+        let docsOk = item.identityRequirementMet == true || !documents.isEmpty
+        return addressOk && docsOk
+            && item.status != "PENDING_REVIEW"
+            && item.status != "VERIFIED"
     }
 
     var body: some View {
@@ -69,13 +91,57 @@ struct TenantVerificationView: View {
                             if let met = item.identityRequirementMet {
                                 LabeledContent("Identity docs", value: met ? "Complete" : "Incomplete")
                             }
+                            LabeledContent("ID verified", value: (item.idVerified == true) ? "Yes" : "No")
+                            if let matched = item.idProofMatchedAddress {
+                                LabeledContent("ID address matched", value: matched ? "Yes" : "No")
+                            }
                         } else {
                             Text("No verification record yet. Save an address to start.")
                                 .foregroundStyle(NriTheme.slate)
                         }
                     }
 
-                    // Document upload via PhotosPicker is a follow-up; address upsert + submit/review is enough for ops loop.
+                    Section {
+                        if documents.isEmpty {
+                            Text("No identity documents uploaded yet.")
+                                .foregroundStyle(NriTheme.slate)
+                        } else {
+                            ForEach(documents) { doc in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(IdDocumentTypeOption(rawValue: doc.documentType)?.title ?? doc.documentType)
+                                        .font(.subheadline.weight(.semibold))
+                                    Text(doc.originalFilename ?? "Document")
+                                        .font(.footnote)
+                                        .foregroundStyle(NriTheme.slate)
+                                }
+                                .padding(.vertical, 2)
+                            }
+                        }
+
+                        if canUploadDocs {
+                            Picker("Document type", selection: $documentType) {
+                                ForEach(IdDocumentTypeOption.allCases) { option in
+                                    Text(option.title).tag(option)
+                                }
+                            }
+                            PhotosPicker(
+                                selection: $photoItem,
+                                matching: .images
+                            ) {
+                                Label(isUploading ? "Uploading…" : "Upload ID photo", systemImage: "doc.badge.plus")
+                            }
+                            .disabled(isUploading)
+                            .onChange(of: photoItem) { _, newItem in
+                                guard let newItem else { return }
+                                Task { await uploadDocument(newItem) }
+                            }
+                        }
+                    } header: {
+                        Text("Identity documents")
+                    } footer: {
+                        Text(item?.identityRequirement
+                            ?? "Upload Aadhaar, or any two other ID proofs (PAN, passport, voter ID, driving licence).")
+                    }
 
                     if canEditAddress {
                         Section {
@@ -88,15 +154,16 @@ struct TenantVerificationView: View {
                                 Button("Submit for review") {
                                     Task { await submit() }
                                 }
-                                .disabled(isSaving || item?.status == "PENDING_REVIEW" || item?.status == "VERIFIED")
+                                .disabled(isSaving || !canSubmit)
                             }
                         } footer: {
-                            Text("After saving your permanent address, submit for staff review. Document upload can be added later.")
+                            Text("Save your permanent address and upload identity documents before submitting.")
                         }
                     }
 
                     if reviewMode {
                         Section("Review") {
+                            Toggle("ID proof matches permanent address", isOn: $idProofMatchedAddress)
                             TextField("Notes (optional)", text: $reviewNotes, axis: .vertical)
                                 .lineLimit(2...4)
                             Button("Verify") {
@@ -149,6 +216,7 @@ struct TenantVerificationView: View {
             city = loaded.permanentCity ?? ""
             state = loaded.permanentState ?? ""
             pincode = loaded.permanentPincode ?? ""
+            idProofMatchedAddress = loaded.idProofMatchedAddress ?? false
         } catch {
             // First-time KYC may not have a record yet.
             if let api = error as? APIError, case .http(let status, _, _) = api, status == 404 {
@@ -182,10 +250,27 @@ struct TenantVerificationView: View {
 
     private func submit() async {
         guard let resolvedTenantId else { return }
+        if !canSubmit {
+            errorMessage = "Add permanent address and identity documents before submitting."
+            return
+        }
         isSaving = true
         errorMessage = nil
         defer { isSaving = false }
         do {
+            // Ensure latest address is saved if the form was edited.
+            if canSaveAddress {
+                _ = try await appState.api.upsertTenantVerification(
+                    tenantUserId: resolvedTenantId,
+                    UpsertTenantVerificationBody(
+                        permanentAddress: address.trimmingCharacters(in: .whitespacesAndNewlines),
+                        permanentLocality: locality.trimmingCharacters(in: .whitespacesAndNewlines),
+                        permanentCity: city.trimmingCharacters(in: .whitespacesAndNewlines),
+                        permanentState: state.trimmingCharacters(in: .whitespacesAndNewlines),
+                        permanentPincode: pincode
+                    )
+                )
+            }
             item = try await appState.api.submitTenantVerification(tenantUserId: resolvedTenantId)
         } catch {
             errorMessage = error.localizedDescription
@@ -203,9 +288,38 @@ struct TenantVerificationView: View {
                 tenantUserId: resolvedTenantId,
                 ReviewTenantVerificationBody(
                     decision: decision,
-                    notes: trimmed.isEmpty ? nil : trimmed
+                    notes: trimmed.isEmpty ? nil : trimmed,
+                    idProofMatchedAddress: idProofMatchedAddress
                 )
             )
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    private func uploadDocument(_ pickerItem: PhotosPickerItem) async {
+        guard let resolvedTenantId else { return }
+        isUploading = true
+        errorMessage = nil
+        defer {
+            isUploading = false
+            photoItem = nil
+        }
+        do {
+            guard let data = try await pickerItem.loadTransferable(type: Data.self) else {
+                errorMessage = "Could not read the selected photo."
+                return
+            }
+            let mime = pickerItem.supportedContentTypes.first?.preferredMIMEType ?? "image/jpeg"
+            let ext = (mime == "image/png") ? "png" : "jpg"
+            _ = try await appState.api.uploadTenantVerificationDocument(
+                tenantUserId: resolvedTenantId,
+                documentType: documentType.rawValue,
+                fileData: data,
+                fileName: "\(documentType.rawValue.lowercased()).\(ext)",
+                mimeType: mime
+            )
+            await load()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -242,7 +356,12 @@ struct KycReviewListView: View {
                             if !item.locationLine.isEmpty {
                                 Text(item.locationLine).font(.subheadline).foregroundStyle(NriTheme.slate)
                             }
-                            StatusChip(text: item.status)
+                            HStack {
+                                StatusChip(text: item.status)
+                                if item.idVerified == true {
+                                    StatusChip(text: "ID VERIFIED", emphasized: true)
+                                }
+                            }
                         }
                         .padding(.vertical, 2)
                     }

@@ -109,6 +109,7 @@ struct UserListView: View {
 
 struct UserDetailView: View {
     @EnvironmentObject private var appState: AppState
+    @EnvironmentObject private var session: SessionStore
 
     let user: ManagedUserItem
     let onChanged: () async -> Void
@@ -132,6 +133,20 @@ struct UserDetailView: View {
                 LabeledContent("Phone", value: current.phone ?? "—")
                 LabeledContent("Role", value: current.role.title)
                 LabeledContent("Status", value: current.active ? "Active" : "Inactive")
+            }
+            if current.role == .TENANT {
+                Section("KYC") {
+                    NavigationLink("Open tenant verification") {
+                        TenantVerificationView(
+                            tenantUserId: current.id,
+                            tenantName: current.fullName,
+                            reviewMode: session.user?.role == .ADMIN || session.user?.role == .EMPLOYEE
+                        )
+                    }
+                    Text("Tenants complete KYC (ID + permanent address) from Profile → My KYC. Staff can review from here or Ops.")
+                        .font(.footnote)
+                        .foregroundStyle(NriTheme.slate)
+                }
             }
             if let errorMessage {
                 Section {
@@ -277,8 +292,14 @@ struct UserFormView: View {
     private var footerHelp: String {
         switch mode {
         case .create(let role):
+            if role == .TENANT {
+                return "Creates a tenant login. After signup, the tenant completes KYC (identity docs + permanent address) from Profile → My KYC. Phone is optional but must be 10–15 digits if provided."
+            }
             return "Creates a \(role.title.lowercased()) login. Phone is optional but must be 10–15 digits if provided. Share the temporary password securely."
-        case .edit:
+        case .edit(let user):
+            if user.role == .TENANT {
+                return "Phone is optional. Tenant KYC (Aadhaar / ID proofs) is managed from Profile → My KYC or tenant verification, not this form."
+            }
             return "Phone is optional. If entered, use 10–15 digits (optional + country code)."
         }
     }

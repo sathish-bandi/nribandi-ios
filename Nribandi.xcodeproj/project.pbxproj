@@ -32,6 +32,7 @@
 		B2CAA1E7620D4A90B8E9306D /* InspectionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81C4D8E76F3F472FB47A26BE /* InspectionsView.swift */; };
 		3A5A409BFF854BF099D4903A /* InvoicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C780855D95F4CC68F7804E5 /* InvoicesView.swift */; };
 		88DDF222B6D34CFAADC50A17 /* TenantVerificationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5596D19391248E0A4DF2075 /* TenantVerificationView.swift */; };
+		B2C3D4E5F6474890A1B2C3D4 /* LogoView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F64789A0B1C2D3 /* LogoView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -63,6 +64,7 @@
 		81C4D8E76F3F472FB47A26BE /* InspectionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InspectionsView.swift; sourceTree = "<group>"; };
 		3C780855D95F4CC68F7804E5 /* InvoicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InvoicesView.swift; sourceTree = "<group>"; };
 		F5596D19391248E0A4DF2075 /* TenantVerificationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TenantVerificationView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F64789A0B1C2D3 /* LogoView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogoView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -135,6 +137,7 @@
 			isa = PBXGroup;
 			children = (
 				84CAEF9BA0F74626A90E85D8 /* Theme.swift */,
+				A1B2C3D4E5F64789A0B1C2D3 /* LogoView.swift */,
 			);
 			path = Design;
 			sourceTree = "<group>";
@@ -360,6 +363,7 @@
 				D17E332662B749F1A9E10FFE /* APIClient.swift in Sources */,
 				C43054DA31CE47F98CB43DC0 /* APIError.swift in Sources */,
 				699670E0EDF14523A94078A7 /* Theme.swift in Sources */,
+				B2C3D4E5F6474890A1B2C3D4 /* LogoView.swift in Sources */,
 				6B3F4B7147DD48FB9A81DE43 /* DashboardView.swift in Sources */,
 				8A3475DCE53A4476AF2CEDBF /* EnquiriesView.swift in Sources */,
 				F0C2BAB542C44BF491312234 /* MainTabView.swift in Sources */,

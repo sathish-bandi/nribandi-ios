@@ -80,6 +80,20 @@ struct LoginRequest: Encodable {
     let password: String
 }
 
+struct ForgotPasswordRequest: Encodable {
+    let email: String
+}
+
+struct ResetPasswordRequest: Encodable {
+    let token: String
+    let newPassword: String
+}
+
+struct ChangePasswordRequest: Encodable {
+    let currentPassword: String
+    let newPassword: String
+}
+
 struct RefreshTokenRequest: Encodable {
     let refreshToken: String
 }
@@ -143,11 +157,37 @@ struct PropertyItem: Decodable, Identifiable, Hashable {
     let numberOfFloors: Int?
     let propertyType: String
     let propertyPurpose: String
+    let active: Bool?
     let createdAt: String?
     let updatedAt: String?
 
     var locationLine: String {
         [locality, city, pincode].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
+    var isActive: Bool { active ?? true }
+}
+
+struct PropertyAttachmentItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let propertyId: UUID
+    let originalFilename: String?
+    let contentType: String?
+    let sizeBytes: Int64?
+    let mediaKind: String?
+    let uploadedByUserId: UUID?
+    let uploadedByName: String?
+    let downloadUrl: String?
+    let createdAt: String?
+
+    var isImage: Bool {
+        if let mediaKind, mediaKind.uppercased() == "IMAGE" { return true }
+        return (contentType ?? "").hasPrefix("image/")
+    }
+
+    var isVideo: Bool {
+        if let mediaKind, mediaKind.uppercased() == "VIDEO" { return true }
+        return (contentType ?? "").hasPrefix("video/")
     }
 }
 
@@ -211,6 +251,7 @@ struct TenancyItem: Decodable, Identifiable, Hashable {
     let propertyName: String?
     let unitId: UUID
     let unitNumber: String?
+    let unitType: String?
     let tenantUserId: UUID
     let tenantName: String?
     let moveInDate: String?
@@ -222,8 +263,23 @@ struct TenancyItem: Decodable, Identifiable, Hashable {
     var label: String {
         let unit = unitNumber.map { "Unit \($0)" } ?? "Unit"
         let property = propertyName ?? "Property"
+        if let unitType, !unitType.isEmpty {
+            return "\(property) · \(unit) · \(UnitTypeDisplay.title(for: unitType))"
+        }
         return "\(property) · \(unit)"
     }
+}
+
+struct ServiceRequestAttachmentItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let serviceRequestId: UUID
+    let originalFilename: String?
+    let contentType: String?
+    let fileSize: Int64?
+    let uploadedByUserId: UUID?
+    let uploadedByName: String?
+    let downloadUrl: String?
+    let createdAt: String?
 }
 
 struct ServiceRequestHistoryItem: Decodable, Identifiable, Hashable {
@@ -275,12 +331,16 @@ struct TenantVerificationItem: Decodable, Identifiable, Hashable {
     let tenantUserId: UUID
     let tenantName: String?
     let status: String
+    let idVerified: Bool?
+    let idProofMatchedAddress: Bool?
     let permanentAddress: String?
     let permanentLocality: String?
     let permanentCity: String?
     let permanentState: String?
     let permanentPincode: String?
     let identityRequirementMet: Bool?
+    let identityRequirement: String?
+    let documents: [TenantVerificationDocumentItem]?
     let submittedAt: String?
     let createdAt: String?
     let updatedAt: String?
@@ -290,6 +350,41 @@ struct TenantVerificationItem: Decodable, Identifiable, Hashable {
             .compactMap { $0 }
             .filter { !$0.isEmpty }
             .joined(separator: " · ")
+    }
+
+    var hasPermanentAddress: Bool {
+        !(permanentAddress ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !(permanentCity ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && !(permanentState ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && (permanentPincode ?? "").count == 6
+    }
+}
+
+struct TenantVerificationDocumentItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let documentType: String
+    let originalFilename: String?
+    let contentType: String?
+    let fileSize: Int64?
+    let uploadedByUserId: UUID?
+    let uploadedByName: String?
+    let downloadUrl: String?
+    let createdAt: String?
+}
+
+enum IdDocumentTypeOption: String, CaseIterable, Identifiable {
+    case AADHAAR, PAN, PASSPORT, VOTER_ID, DRIVING_LICENSE, OTHER
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .AADHAAR: return "Aadhaar"
+        case .PAN: return "PAN"
+        case .PASSPORT: return "Passport"
+        case .VOTER_ID: return "Voter ID"
+        case .DRIVING_LICENSE: return "Driving licence"
+        case .OTHER: return "Other ID"
+        }
     }
 }
 
@@ -435,6 +530,11 @@ struct CreateUnitBody: Encodable {
     let unitType: String
 }
 
+struct UpdateUnitBody: Encodable {
+    var unitNumber: String?
+    var unitType: String?
+}
+
 struct UpdateUnitStatusBody: Encodable {
     var occupancyStatus: String?
     var toLetBoardStatus: String?
@@ -562,6 +662,7 @@ struct UpsertTenantVerificationBody: Encodable {
 struct ReviewTenantVerificationBody: Encodable {
     let decision: String
     let notes: String?
+    var idProofMatchedAddress: Bool? = nil
 }
 
 enum ServiceRequestStatusOption: String, CaseIterable, Identifiable {

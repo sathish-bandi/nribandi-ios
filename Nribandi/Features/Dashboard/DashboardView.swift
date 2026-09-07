@@ -61,6 +61,7 @@ struct DashboardView: View {
     @State private var summary: DashboardSummary?
     @State private var errorMessage: String?
     @State private var isLoading = true
+    @State private var cardsVisible = false
 
     var body: some View {
         NavigationStack {
@@ -77,17 +78,19 @@ struct DashboardView: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 16) {
                             if summary.totalProperties == 0 && summary.totalUnits == 0 {
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("No demo data yet")
+                                VStack(alignment: .leading, spacing: 14) {
+                                    LogoView(style: .compact, animate: true)
+                                    Text("Welcome to NRIBANDI")
                                         .font(.headline)
                                         .foregroundStyle(NriTheme.ink)
-                                    Text("The API is connected, but Postgres has no demo rows yet.\n\nRun seed on the backend, then swipe down to refresh.")
+                                    Text("No properties yet. Add your first building to start managing units, tenants, and service requests.")
                                         .font(.subheadline)
                                         .foregroundStyle(NriTheme.slate)
                                 }
                                 .padding()
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .background(NriTheme.sand, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .background(NriTheme.mist, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                .transition(.opacity.combined(with: .move(edge: .top)))
                             }
 
                             Text("Tap a card to open details")
@@ -95,7 +98,7 @@ struct DashboardView: View {
                                 .foregroundStyle(NriTheme.slate)
 
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
-                                ForEach(DashboardMetric.allCases) { metric in
+                                ForEach(Array(DashboardMetric.allCases.enumerated()), id: \.element.id) { index, metric in
                                     NavigationLink(value: metric) {
                                         MetricCard(
                                             title: metric.title,
@@ -106,12 +109,18 @@ struct DashboardView: View {
                                     }
                                     .buttonStyle(.plain)
                                     .accessibilityHint("Shows \(metric.title.lowercased()) details")
+                                    .opacity(cardsVisible ? 1 : 0)
+                                    .offset(y: cardsVisible ? 0 : 12)
+                                    .animation(.easeOut(duration: 0.45).delay(0.04 * Double(index)), value: cardsVisible)
                                 }
                             }
                         }
                         .padding()
                     }
                     .refreshable { await load() }
+                    .onAppear {
+                        withAnimation { cardsVisible = true }
+                    }
                 }
             }
             .navigationTitle("Dashboard")
@@ -185,7 +194,7 @@ struct DashboardMetricDetailView: View {
                                     Text(row.unit.title).font(.headline)
                                     Text(row.propertyName).font(.subheadline).foregroundStyle(NriTheme.slate)
                                     HStack {
-                                        StatusChip(text: row.unit.unitType)
+                                        StatusChip(text: UnitTypeDisplay.title(for: row.unit.unitType), emphasized: true)
                                         StatusChip(text: row.unit.occupancyStatus)
                                         StatusChip(text: row.unit.toLetBoardStatus)
                                     }
