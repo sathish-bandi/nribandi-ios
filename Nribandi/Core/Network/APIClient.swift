@@ -790,11 +790,7 @@ final class APIClient {
            let message = envelope.message, !message.isEmpty {
             return message
         }
-        struct MessageOnly: Decodable {
-            let message: String?
-            let success: Bool?
-        }
-        if let parsed = try? JSONDecoder().decode(MessageOnly.self, from: data),
+        if let parsed = try? JSONDecoder().decode(MessageOnlyPayload.self, from: data),
            let message = parsed.message, !message.isEmpty {
             return message
         }
@@ -897,4 +893,11 @@ final class APIClient {
         }
         return error.localizedDescription
     }
+}
+
+/// Decodes message-only API envelopes. Kept outside generic methods (Swift
+/// does not allow nested types inside generic functions).
+private struct MessageOnlyPayload: Decodable {
+    let message: String?
+    let success: Bool?
 }
