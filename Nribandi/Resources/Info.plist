@@ -27,7 +27,7 @@
 	<key>NribandiTestAPIBaseURL</key>
 	<string>https://api-qa.example.com</string>
 	<key>NribandiProdAPIBaseURL</key>
-	<string>https://api.example.com</string>
+	<string>http://13.235.9.106:8082</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
@@ -45,6 +45,14 @@
 			<dict>
 				<key>NSExceptionAllowsInsecureHTTPLoads</key>
 				<true/>
+			</dict>
+			<!-- Temporary cleartext for EC2 PROD until HTTPS domain is ready. Remove for App Store. -->
+			<key>13.235.9.106</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<false/>
 			</dict>
 		</dict>
 	</dict>
