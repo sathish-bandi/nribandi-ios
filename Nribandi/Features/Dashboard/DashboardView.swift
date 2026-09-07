@@ -80,7 +80,7 @@ struct DashboardView: View {
                             if summary.totalProperties == 0 && summary.totalUnits == 0 {
                                 VStack(alignment: .leading, spacing: 14) {
                                     LogoView(style: .compact, animate: true)
-                                    Text("Welcome to NRIBANDI")
+                                    Text("Welcome to NRICare")
                                         .font(.headline)
                                         .foregroundStyle(NriTheme.ink)
                                     Text("No properties yet. Add your first building to start managing units, tenants, and service requests.")

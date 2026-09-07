@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Brand mark: teal circle + building icon + optional NRIBANDI wordmark.
+/// Brand mark: teal circle + building icon + optional NRICare wordmark.
 struct LogoView: View {
     enum Style {
         case hero
@@ -19,7 +19,7 @@ struct LogoView: View {
             case .hero:
                 VStack(alignment: .leading, spacing: 14) {
                     mark(size: 64, icon: 28)
-                    Text("NRIBANDI")
+                    Text("NRICare")
                         .font(.system(size: 36, weight: .bold, design: .serif))
                         .foregroundStyle(NriTheme.ink)
                         .tracking(1.2)
@@ -27,7 +27,7 @@ struct LogoView: View {
             case .compact:
                 HStack(spacing: 12) {
                     mark(size: 40, icon: 18)
-                    Text("NRIBANDI")
+                    Text("NRICare")
                         .font(.system(size: 22, weight: .bold, design: .serif))
                         .foregroundStyle(NriTheme.ink)
                         .tracking(0.8)
