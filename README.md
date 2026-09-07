@@ -1,6 +1,6 @@
-# NRICare iOS
+# NRIBANDI iOS
 
-Native **SwiftUI** client for the NRICare rental-property backend.
+Native **SwiftUI** client for the NRIBANDI rental-property backend.
 
 This repository is **iOS only**. The Spring Boot API lives in a separate repo:
 [`sathish-bandi/rental-property-app`](https://github.com/sathish-bandi/rental-property-app).
