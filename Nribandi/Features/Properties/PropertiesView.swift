@@ -19,18 +19,33 @@ struct PropertiesView: View {
                 if isLoading && items.isEmpty {
                     ProgressView("Loading properties…")
                 } else if let errorMessage, items.isEmpty {
-                    ContentUnavailableView("Could not load", systemImage: "building.2", description: Text(errorMessage))
+                    ContentUnavailableView {
+                        Label("Could not load", systemImage: "building.2")
+                    } description: {
+                        Text(errorMessage)
+                    } actions: {
+                        Button("Try again") { Task { await load() } }
+                            .buttonStyle(.borderedProminent)
+                    }
                 } else if items.isEmpty {
-                    ContentUnavailableView(
-                        "No properties",
-                        systemImage: "building.2",
-                        description: Text(canManageProperties ? "Tap + to add a property." : "Nothing visible for this account yet.")
-                    )
+                    ContentUnavailableView {
+                        Label("No properties", systemImage: "building.2")
+                    } description: {
+                        Text(canManageProperties ? "Tap + to add a property." : "Nothing visible for this account yet.")
+                    } actions: {
+                        if canManageProperties {
+                            Button("Add property") { showCreate = true }
+                                .buttonStyle(.borderedProminent)
+                        }
+                    }
                 } else {
+                    // Push-style links avoid SwiftUI double-push when list chrome swaps with loading/empty.
                     ScrollView(.vertical) {
                         VStack(spacing: 12) {
                             ForEach(items) { property in
-                                NavigationLink(value: property) {
+                                NavigationLink {
+                                    PropertyDetailView(property: property) { await load() }
+                                } label: {
                                     VStack(alignment: .leading, spacing: 6) {
                                         Text(property.name).font(.headline).foregroundStyle(NriTheme.ink)
                                         Text(property.locationLine).font(.subheadline).foregroundStyle(NriTheme.slate)
@@ -60,8 +75,6 @@ struct PropertiesView: View {
                     .refreshable { await load() }
                 }
             }
-            // Keep destination on stable NavigationStack content — not inside the List/ScrollView branch.
-            .navigationDestination(for: PropertyItem.self) { PropertyDetailView(property: $0) }
             .navigationTitle("Properties")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

@@ -21,11 +21,14 @@ struct ServiceRequestsView: View {
                 if isLoading && items.isEmpty {
                     ProgressView("Loading requests…")
                 } else if let errorMessage, items.isEmpty {
-                    ContentUnavailableView(
-                        "Could not load",
-                        systemImage: "wrench.and.screwdriver",
-                        description: Text(errorMessage)
-                    )
+                    ContentUnavailableView {
+                        Label("Could not load", systemImage: "wrench.and.screwdriver")
+                    } description: {
+                        Text(errorMessage)
+                    } actions: {
+                        Button("Try again") { Task { await load() } }
+                            .buttonStyle(.borderedProminent)
+                    }
                 } else if items.isEmpty {
                     ContentUnavailableView {
                         Label("No service requests", systemImage: "checkmark.seal")
@@ -42,8 +45,11 @@ struct ServiceRequestsView: View {
                         }
                     }
                 } else {
+                    // Push-style links avoid SwiftUI double-push under loading conditionals.
                     List(items) { item in
-                        NavigationLink(value: item) {
+                        NavigationLink {
+                            ServiceRequestDetailView(requestId: item.id) { await load() }
+                        } label: {
                             VStack(alignment: .leading, spacing: 6) {
                                 Text(item.title).font(.headline)
                                 if let description = item.description, !description.isEmpty {
@@ -73,9 +79,6 @@ struct ServiceRequestsView: View {
                 }
             }
             .navigationTitle("Service requests")
-            .navigationDestination(for: ServiceRequestItem.self) { item in
-                ServiceRequestDetailView(requestId: item.id)
-            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 12) {
@@ -301,6 +304,7 @@ struct ServiceRequestDetailView: View {
     @EnvironmentObject private var session: SessionStore
 
     let requestId: UUID
+    var onChanged: (() async -> Void)? = nil
 
     @State private var item: ServiceRequestItem?
     @State private var history: [ServiceRequestHistoryItem] = []
@@ -335,11 +339,14 @@ struct ServiceRequestDetailView: View {
             if isLoading && item == nil {
                 ProgressView("Loading…")
             } else if let errorMessage, item == nil {
-                ContentUnavailableView(
-                    "Could not load",
-                    systemImage: "wrench.and.screwdriver",
-                    description: Text(errorMessage)
-                )
+                ContentUnavailableView {
+                    Label("Could not load", systemImage: "wrench.and.screwdriver")
+                } description: {
+                    Text(errorMessage)
+                } actions: {
+                    Button("Try again") { Task { await load() } }
+                        .buttonStyle(.borderedProminent)
+                }
             } else if let item {
                 List {
                     Section("Request") {
@@ -450,6 +457,7 @@ struct ServiceRequestDetailView: View {
             AssignEmployeeSheet(title: "Assign request") { employeeId in
                 item = try await appState.api.assignServiceRequest(id: requestId, employeeUserId: employeeId)
                 history = try await appState.api.serviceRequestHistory(id: requestId)
+                await onChanged?()
             }
         }
         .sheet(isPresented: $showUpdateStatus) {
@@ -459,6 +467,7 @@ struct ServiceRequestDetailView: View {
                     UpdateServiceRequestStatusBody(status: status, comments: comments)
                 )
                 history = try await appState.api.serviceRequestHistory(id: requestId)
+                await onChanged?()
             }
         }
         .task { await load() }
@@ -498,6 +507,7 @@ struct ServiceRequestDetailView: View {
         do {
             item = try await appState.api.cancelServiceRequest(id: requestId)
             history = try await appState.api.serviceRequestHistory(id: requestId)
+            await onChanged?()
         } catch {
             errorMessage = error.localizedDescription
         }

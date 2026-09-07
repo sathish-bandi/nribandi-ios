@@ -8,6 +8,7 @@ struct PropertyDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var property: PropertyItem
+    var onChanged: (() async -> Void)? = nil
     @State private var units: [UnitItem] = []
     @State private var blocks: [BlockItem] = []
     @State private var floors: [FloorItem] = []
@@ -24,8 +25,9 @@ struct PropertyDetailView: View {
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var showFileImporter = false
 
-    init(property: PropertyItem) {
+    init(property: PropertyItem, onChanged: (() async -> Void)? = nil) {
         _property = State(initialValue: property)
+        self.onChanged = onChanged
     }
 
     private var canManageStructure: Bool {
@@ -57,6 +59,15 @@ struct PropertyDetailView: View {
     var body: some View {
         ScrollView(.vertical) {
             VStack(alignment: .leading, spacing: 16) {
+                if let errorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(NriTheme.terracotta)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(NriTheme.sand, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+
                 NriSectionCard(title: "Address") {
                     Text(property.address)
                     Text(property.locationLine).foregroundStyle(NriTheme.slate)
@@ -148,8 +159,6 @@ struct PropertyDetailView: View {
                 NriSectionCard(title: "Units") {
                     if isLoading {
                         ProgressView()
-                    } else if let errorMessage {
-                        Text(errorMessage).foregroundStyle(NriTheme.terracotta)
                     } else if units.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(structureHint)
@@ -163,7 +172,10 @@ struct PropertyDetailView: View {
                     } else {
                         ForEach(units) { unit in
                             NavigationLink {
-                                UnitDetailView(unit: unit, propertyName: property.name)
+                                UnitDetailView(unit: unit, propertyName: property.name) {
+                                    await reload()
+                                    await onChanged?()
+                                }
                             } label: {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(unit.title).font(.subheadline.weight(.semibold))
@@ -224,6 +236,8 @@ struct PropertyDetailView: View {
         .sheet(isPresented: $showEdit) {
             PropertyFormView(mode: .edit(property)) { updated in
                 property = updated
+                await reload()
+                await onChanged?()
             }
             .environmentObject(appState)
             .environmentObject(session)
@@ -231,16 +245,19 @@ struct PropertyDetailView: View {
         .sheet(isPresented: $showAddBlock) {
             AddBlockSheet(propertyId: property.id) {
                 await reload()
+                await onChanged?()
             }
         }
         .sheet(isPresented: $showAddFloor) {
             AddFloorSheet(propertyId: property.id, blocks: blocks, requiresBlock: usesBlocks) {
                 await reload()
+                await onChanged?()
             }
         }
         .sheet(isPresented: $showAddUnit) {
             AddUnitSheet(propertyId: property.id, initialFloors: floors) {
                 await reload()
+                await onChanged?()
             }
             .environmentObject(appState)
         }
@@ -311,6 +328,7 @@ struct PropertyDetailView: View {
         defer { isDeleting = false }
         do {
             property = try await appState.api.deleteProperty(id: property.id)
+            await onChanged?()
             dismiss()
         } catch {
             errorMessage = error.localizedDescription

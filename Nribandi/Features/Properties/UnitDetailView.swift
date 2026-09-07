@@ -6,6 +6,7 @@ struct UnitDetailView: View {
 
     @State private var unit: UnitItem
     let propertyName: String
+    var onChanged: (() async -> Void)? = nil
 
     @State private var tenancies: [TenancyItem] = []
     @State private var errorMessage: String?
@@ -13,12 +14,12 @@ struct UnitDetailView: View {
     @State private var showAssignTenancy = false
     @State private var showUpdateStatus = false
     @State private var showEditDefinition = false
-    @State private var endingTenancyId: UUID?
-    @State private var moveOutDate = Date()
+    @State private var endingTenancy: TenancyItem?
 
-    init(unit: UnitItem, propertyName: String) {
+    init(unit: UnitItem, propertyName: String, onChanged: (() async -> Void)? = nil) {
         _unit = State(initialValue: unit)
         self.propertyName = propertyName
+        self.onChanged = onChanged
     }
 
     private var canUpdateStatus: Bool {
@@ -73,8 +74,7 @@ struct UnitDetailView: View {
                             StatusChip(text: tenancy.active ? "ACTIVE" : "ENDED")
                             if canManageTenancy, tenancy.active {
                                 Button("End tenancy") {
-                                    endingTenancyId = tenancy.id
-                                    moveOutDate = Date()
+                                    endingTenancy = tenancy
                                 }
                                 .foregroundStyle(NriTheme.terracotta)
                             }
@@ -123,26 +123,25 @@ struct UnitDetailView: View {
         .sheet(isPresented: $showAssignTenancy) {
             AssignTenancySheet(unitId: unit.id) {
                 await load()
+                await onChanged?()
             }
         }
         .sheet(isPresented: $showUpdateStatus) {
             UpdateUnitStatusSheet(unit: unit) { updated in
                 unit = updated
+                Task { await onChanged?() }
             }
         }
         .sheet(isPresented: $showEditDefinition) {
             EditUnitDefinitionSheet(unit: unit) { updated in
                 unit = updated
+                Task { await onChanged?() }
             }
         }
-        .sheet(isPresented: Binding(
-            get: { endingTenancyId != nil },
-            set: { if !$0 { endingTenancyId = nil } }
-        )) {
-            if let endingTenancyId {
-                EndTenancySheet(tenancyId: endingTenancyId) {
-                    await load()
-                }
+        .sheet(item: $endingTenancy) { tenancy in
+            EndTenancySheet(tenancyId: tenancy.id) {
+                await load()
+                await onChanged?()
             }
         }
         .task { await load() }

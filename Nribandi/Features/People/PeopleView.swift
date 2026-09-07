@@ -53,13 +53,23 @@ struct UserListView: View {
             if isLoading && items.isEmpty {
                 ProgressView("Loading \(title.lowercased())…")
             } else if let errorMessage, items.isEmpty {
-                ContentUnavailableView("Could not load", systemImage: "person.2", description: Text(errorMessage))
+                ContentUnavailableView {
+                    Label("Could not load", systemImage: "person.2")
+                } description: {
+                    Text(errorMessage)
+                } actions: {
+                    Button("Try again") { Task { await load() } }
+                        .buttonStyle(.borderedProminent)
+                }
             } else if items.isEmpty {
-                ContentUnavailableView(
-                    "No \(title.lowercased())",
-                    systemImage: "person.2",
-                    description: Text("Tap + to add one.")
-                )
+                ContentUnavailableView {
+                    Label("No \(title.lowercased())", systemImage: "person.2")
+                } description: {
+                    Text("Tap + to add one.")
+                } actions: {
+                    Button("Add") { showCreate = true }
+                        .buttonStyle(.borderedProminent)
+                }
             } else {
                 List(items) { user in
                     NavigationLink {
@@ -222,7 +232,10 @@ struct UserDetailView: View {
                     tenantUserId: current.id,
                     tenantName: current.fullName,
                     reviewMode: canReviewKyc
-                )
+                ) {
+                    await loadKyc()
+                    await onChanged()
+                }
             }
         }
     }

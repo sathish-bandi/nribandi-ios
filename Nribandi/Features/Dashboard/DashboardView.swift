@@ -69,11 +69,14 @@ struct DashboardView: View {
                 if isLoading && summary == nil {
                     ProgressView("Loading dashboard…")
                 } else if let errorMessage, summary == nil {
-                    ContentUnavailableView(
-                        "Could not load",
-                        systemImage: "wifi.exclamationmark",
-                        description: Text(errorMessage)
-                    )
+                    ContentUnavailableView {
+                        Label("Could not load", systemImage: "wifi.exclamationmark")
+                    } description: {
+                        Text(errorMessage)
+                    } actions: {
+                        Button("Try again") { Task { await load() } }
+                            .buttonStyle(.borderedProminent)
+                    }
                 } else if let summary {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 16) {
@@ -99,7 +102,9 @@ struct DashboardView: View {
 
                             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                                 ForEach(Array(DashboardMetric.allCases.enumerated()), id: \.element.id) { index, metric in
-                                    NavigationLink(value: metric) {
+                                    NavigationLink {
+                                        DashboardMetricDetailView(metric: metric)
+                                    } label: {
                                         MetricCard(
                                             title: metric.title,
                                             value: metric.value(from: summary),
@@ -126,9 +131,6 @@ struct DashboardView: View {
                 }
             }
             .navigationTitle("Dashboard")
-            .navigationDestination(for: DashboardMetric.self) { metric in
-                DashboardMetricDetailView(metric: metric)
-            }
             .toolbar { ToolbarItem(placement: .topBarTrailing) { EnvBadge(env: appState.environment) } }
             .task { await load() }
         }
@@ -161,11 +163,14 @@ struct DashboardMetricDetailView: View {
             if isLoading && isEmpty {
                 ProgressView("Loading \(metric.title.lowercased())…")
             } else if let errorMessage, isEmpty {
-                ContentUnavailableView(
-                    "Could not load",
-                    systemImage: "exclamationmark.triangle",
-                    description: Text(errorMessage)
-                )
+                ContentUnavailableView {
+                    Label("Could not load", systemImage: "exclamationmark.triangle")
+                } description: {
+                    Text(errorMessage)
+                } actions: {
+                    Button("Try again") { Task { await load() } }
+                        .buttonStyle(.borderedProminent)
+                }
             } else if isEmpty {
                 ContentUnavailableView(
                     "Nothing here",
@@ -173,11 +178,14 @@ struct DashboardMetricDetailView: View {
                     description: Text("No \(metric.title.lowercased()) right now.")
                 )
             } else {
+                // Push-style links — avoid value-based destinations under loading branches.
                 List {
                     switch metric {
                     case .properties:
                         ForEach(properties) { property in
-                            NavigationLink(value: property) {
+                            NavigationLink {
+                                PropertyDetailView(property: property) { await load() }
+                            } label: {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(property.name).font(.headline)
                                     Text(property.locationLine).font(.subheadline).foregroundStyle(NriTheme.slate)
@@ -191,7 +199,9 @@ struct DashboardMetricDetailView: View {
                         }
                     case .units, .occupied, .vacant, .toLetBoards:
                         ForEach(units) { row in
-                            NavigationLink(value: row.unit.propertyId) {
+                            NavigationLink {
+                                PropertyDetailLoaderView(propertyId: row.unit.propertyId) { await load() }
+                            } label: {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(row.unit.title).font(.headline)
                                     Text(row.propertyName).font(.subheadline).foregroundStyle(NriTheme.slate)
@@ -206,7 +216,9 @@ struct DashboardMetricDetailView: View {
                         }
                     case .pendingRequests, .inProgressRequests:
                         ForEach(requests) { item in
-                            NavigationLink(value: item) {
+                            NavigationLink {
+                                ServiceRequestDetailView(requestId: item.id) { await load() }
+                            } label: {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(item.title).font(.headline)
                                     if let description = item.description, !description.isEmpty {
@@ -228,7 +240,9 @@ struct DashboardMetricDetailView: View {
                                     tenantUserId: item.tenantUserId,
                                     tenantName: item.tenantName,
                                     reviewMode: true
-                                )
+                                ) {
+                                    await load()
+                                }
                             } label: {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(item.tenantName ?? "Tenant").font(.headline)
@@ -272,16 +286,8 @@ struct DashboardMetricDetailView: View {
                 .nriPhoneScrollInsets()
             }
         }
-        // Destinations stay on the always-present Group, not inside loading branches.
         .navigationTitle(metric.title)
         .navigationBarTitleDisplayMode(.inline)
-        .navigationDestination(for: PropertyItem.self) { PropertyDetailView(property: $0) }
-        .navigationDestination(for: ServiceRequestItem.self) { item in
-            ServiceRequestDetailView(requestId: item.id)
-        }
-        .navigationDestination(for: UUID.self) { propertyId in
-            PropertyDetailLoaderView(propertyId: propertyId)
-        }
         .task { await load() }
         .refreshable { await load() }
     }
@@ -356,6 +362,7 @@ struct DashboardMetricDetailView: View {
 struct PropertyDetailLoaderView: View {
     @EnvironmentObject private var appState: AppState
     let propertyId: UUID
+    var onChanged: (() async -> Void)? = nil
 
     @State private var property: PropertyItem?
     @State private var errorMessage: String?
@@ -366,13 +373,26 @@ struct PropertyDetailLoaderView: View {
             if isLoading {
                 ProgressView("Loading property…")
             } else if let property {
-                PropertyDetailView(property: property)
+                PropertyDetailView(property: property, onChanged: onChanged)
             } else {
-                ContentUnavailableView(
-                    "Could not load",
-                    systemImage: "building.2",
-                    description: Text(errorMessage ?? "Property not found.")
-                )
+                ContentUnavailableView {
+                    Label("Could not load", systemImage: "building.2")
+                } description: {
+                    Text(errorMessage ?? "Property not found.")
+                } actions: {
+                    Button("Try again") {
+                        Task {
+                            isLoading = true
+                            defer { isLoading = false }
+                            do {
+                                self.property = try await appState.api.property(id: propertyId)
+                            } catch {
+                                errorMessage = error.localizedDescription
+                            }
+                        }
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
             }
         }
         .task {

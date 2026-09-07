@@ -20,7 +20,14 @@ struct InspectionsView: View {
             if isLoading && items.isEmpty {
                 ProgressView("Loading inspections…")
             } else if let errorMessage, items.isEmpty {
-                ContentUnavailableView("Could not load", systemImage: "checklist", description: Text(errorMessage))
+                ContentUnavailableView {
+                    Label("Could not load", systemImage: "checklist")
+                } description: {
+                    Text(errorMessage)
+                } actions: {
+                    Button("Try again") { Task { await load() } }
+                        .buttonStyle(.borderedProminent)
+                }
             } else if items.isEmpty {
                 ContentUnavailableView {
                     Label("No inspections", systemImage: "checklist")

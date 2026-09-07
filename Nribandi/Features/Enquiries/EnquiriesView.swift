@@ -12,12 +12,26 @@ struct EnquiriesView: View {
             if isLoading && items.isEmpty {
                 ProgressView("Loading enquiries…")
             } else if let errorMessage, items.isEmpty {
-                ContentUnavailableView("Could not load", systemImage: "bubble.left", description: Text(errorMessage))
+                ContentUnavailableView {
+                    Label("Could not load", systemImage: "bubble.left")
+                } description: {
+                    Text(errorMessage)
+                } actions: {
+                    Button("Try again") { Task { await load() } }
+                        .buttonStyle(.borderedProminent)
+                }
             } else if items.isEmpty {
-                ContentUnavailableView("No enquiries", systemImage: "tray", description: Text("WhatsApp and manual leads will appear here."))
+                ContentUnavailableView(
+                    "No enquiries",
+                    systemImage: "tray",
+                    description: Text("WhatsApp and manual leads will appear here.")
+                )
             } else {
+                // Push-style links avoid SwiftUI double-push under loading conditionals.
                 List(items) { item in
-                    NavigationLink(value: item) {
+                    NavigationLink {
+                        EnquiryDetailView(enquiryId: item.id) { await load() }
+                    } label: {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(item.customerName).font(.headline)
                             Text(item.mobileNumber).font(.subheadline.monospaced()).foregroundStyle(NriTheme.slate)
@@ -42,9 +56,6 @@ struct EnquiriesView: View {
             }
         }
         .navigationTitle("Enquiries")
-        .navigationDestination(for: EnquiryItem.self) { item in
-            EnquiryDetailView(enquiryId: item.id)
-        }
         .toolbar {
             if !embedsInParentNavigation {
                 ToolbarItem(placement: .topBarTrailing) { EnvBadge(env: appState.environment) }
@@ -79,6 +90,7 @@ struct EnquiryDetailView: View {
     @EnvironmentObject private var session: SessionStore
 
     let enquiryId: UUID
+    var onChanged: (() async -> Void)? = nil
 
     @State private var item: EnquiryItem?
     @State private var errorMessage: String?
@@ -96,7 +108,14 @@ struct EnquiryDetailView: View {
             if isLoading && item == nil {
                 ProgressView("Loading…")
             } else if let errorMessage, item == nil {
-                ContentUnavailableView("Could not load", systemImage: "bubble.left", description: Text(errorMessage))
+                ContentUnavailableView {
+                    Label("Could not load", systemImage: "bubble.left")
+                } description: {
+                    Text(errorMessage)
+                } actions: {
+                    Button("Try again") { Task { await load() } }
+                        .buttonStyle(.borderedProminent)
+                }
             } else if let item {
                 List {
                     Section("Lead") {
@@ -142,11 +161,13 @@ struct EnquiryDetailView: View {
         .sheet(isPresented: $showAssign) {
             AssignEmployeeSheet(title: "Assign enquiry") { employeeId in
                 item = try await appState.api.assignEnquiry(id: enquiryId, employeeUserId: employeeId)
+                await onChanged?()
             }
         }
         .sheet(isPresented: $showStatus) {
             UpdateEnquiryStatusSheet(current: item?.status ?? "NEW") { status in
                 item = try await appState.api.updateEnquiryStatus(id: enquiryId, status: status)
+                await onChanged?()
             }
         }
         .task { await load() }

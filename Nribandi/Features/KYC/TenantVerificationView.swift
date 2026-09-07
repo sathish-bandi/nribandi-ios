@@ -11,6 +11,7 @@ struct TenantVerificationView: View {
     var tenantUserId: UUID?
     var tenantName: String?
     var reviewMode: Bool = false
+    var onChanged: (() async -> Void)? = nil
 
     @State private var item: TenantVerificationItem?
     @State private var address = ""
@@ -56,6 +57,15 @@ struct TenantVerificationView: View {
         Group {
             if isLoading && item == nil && errorMessage == nil {
                 ProgressView("Loading verification…")
+            } else if let errorMessage, item == nil, !canEditAddress {
+                ContentUnavailableView {
+                    Label("Could not load", systemImage: "person.text.rectangle")
+                } description: {
+                    Text(errorMessage)
+                } actions: {
+                    Button("Try again") { Task { await load() } }
+                        .buttonStyle(.borderedProminent)
+                }
             } else {
                 Form {
                     if let name = tenantName ?? item?.tenantName {
@@ -243,6 +253,7 @@ struct TenantVerificationView: View {
                     permanentPincode: pincode
                 )
             )
+            await onChanged?()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -272,6 +283,7 @@ struct TenantVerificationView: View {
                 )
             }
             item = try await appState.api.submitTenantVerification(tenantUserId: resolvedTenantId)
+            await onChanged?()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -292,6 +304,7 @@ struct TenantVerificationView: View {
                     idProofMatchedAddress: idProofMatchedAddress
                 )
             )
+            await onChanged?()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -320,6 +333,7 @@ struct TenantVerificationView: View {
                 mimeType: mime
             )
             await load()
+            await onChanged?()
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -339,7 +353,14 @@ struct KycReviewListView: View {
             if isLoading && items.isEmpty {
                 ProgressView("Loading KYC queue…")
             } else if let errorMessage, items.isEmpty {
-                ContentUnavailableView("Could not load", systemImage: "person.text.rectangle", description: Text(errorMessage))
+                ContentUnavailableView {
+                    Label("Could not load", systemImage: "person.text.rectangle")
+                } description: {
+                    Text(errorMessage)
+                } actions: {
+                    Button("Try again") { Task { await load() } }
+                        .buttonStyle(.borderedProminent)
+                }
             } else if items.isEmpty {
                 ContentUnavailableView("No pending KYC", systemImage: "checkmark.seal", description: Text("Submitted tenant verifications will appear here."))
             } else {
@@ -349,7 +370,9 @@ struct KycReviewListView: View {
                             tenantUserId: item.tenantUserId,
                             tenantName: item.tenantName,
                             reviewMode: true
-                        )
+                        ) {
+                            await load()
+                        }
                     } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(item.tenantName ?? "Tenant").font(.headline)
