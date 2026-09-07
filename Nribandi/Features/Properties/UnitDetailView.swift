@@ -415,13 +415,14 @@ private struct EditUnitDefinitionSheet: View {
                     TextField("Unit number", text: $unitNumber)
                         .textInputAutocapitalization(.characters)
                 }
-                Section("BHK layout") {
+                Section {
                     ForEach(UnitTypeOption.pickerCases) { option in
                         Button {
                             unitType = option
                         } label: {
                             HStack {
-                                Text(option.title).foregroundStyle(NriTheme.ink)
+                                Text(option.title)
+                                    .foregroundStyle(NriTheme.ink)
                                 Spacer()
                                 if unitType == option {
                                     Image(systemName: "checkmark.circle.fill")
@@ -430,6 +431,8 @@ private struct EditUnitDefinitionSheet: View {
                             }
                         }
                     }
+                } header: {
+                    Text("BHK layout")
                 } footer: {
                     Text("Selected: \(unitType.title)")
                 }
