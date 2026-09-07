@@ -432,12 +432,14 @@ private struct EditUnitDefinitionSheet: View {
                                         .foregroundStyle(NriTheme.teal)
                                 }
                             }
+                            .contentShape(Rectangle())
                         }
+                        .buttonStyle(.borderless)
                     }
                 } header: {
                     Text("BHK layout")
                 } footer: {
-                    Text("Selected: \(unitType.title)")
+                    Text("Selected: \(unitType.title) (\(unitType.rawValue))")
                 }
                 if let errorMessage {
                     Section { Text(errorMessage).foregroundStyle(NriTheme.terracotta) }

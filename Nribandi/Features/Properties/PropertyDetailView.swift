@@ -42,10 +42,16 @@ struct PropertyDetailView: View {
     }
 
     private var structureHint: String {
-        if usesBlocks {
-            return "Set up this property in order: add blocks/towers → add floors under each block → add units and map each unit to 1/2/3 BHK."
+        if floors.isEmpty {
+            if usesBlocks && blocks.isEmpty {
+                return "Add a block/tower, then floors under it, then units with a BHK layout."
+            }
+            if usesBlocks {
+                return "Add floors under a block/tower, then add units and map each to 1/2/3 BHK."
+            }
+            return "Add floors first, then add units and map each unit to its BHK layout (1 BHK, 2 BHK, 3 BHK, …)."
         }
-        return "Add floors first, then add units and map each unit to its BHK layout (1 BHK, 2 BHK, 3 BHK, …)."
+        return "No units yet. Use Add unit (BHK) to create a flat and choose its layout (1 BHK, 2 BHK, 3 BHK, …)."
     }
 
     var body: some View {
@@ -131,8 +137,8 @@ struct PropertyDetailView: View {
                 }
 
                 if !floors.isEmpty {
-                    NriSectionCard(title: "Floors") {
-                        ForEach(floors) { floor in
+                    NriSectionCard(title: "Floors (\(floors.count))") {
+                        ForEach(floors.sorted(by: floorSort)) { floor in
                             Text(floorLabel(floor))
                                 .font(.subheadline)
                         }
@@ -148,9 +154,11 @@ struct PropertyDetailView: View {
                         VStack(alignment: .leading, spacing: 6) {
                             Text(structureHint)
                                 .foregroundStyle(NriTheme.slate)
-                            Text("When adding a unit, choose the BHK layout (1 BHK, 2 BHK, 3 BHK, …) for that floor.")
-                                .font(.footnote)
-                                .foregroundStyle(NriTheme.slate)
+                            if floors.isEmpty {
+                                Text("When floors exist, use Add unit (BHK) and choose the layout for each flat.")
+                                    .font(.footnote)
+                                    .foregroundStyle(NriTheme.slate)
+                            }
                         }
                     } else {
                         ForEach(units) { unit in
@@ -231,9 +239,10 @@ struct PropertyDetailView: View {
             }
         }
         .sheet(isPresented: $showAddUnit) {
-            AddUnitSheet(propertyId: property.id, floors: floors) {
+            AddUnitSheet(propertyId: property.id, initialFloors: floors) {
                 await reload()
             }
+            .environmentObject(appState)
         }
         .fileImporter(
             isPresented: $showFileImporter,
@@ -269,6 +278,13 @@ struct PropertyDetailView: View {
         return parts.joined(separator: " · ")
     }
 
+    private func floorSort(_ lhs: FloorItem, _ rhs: FloorItem) -> Bool {
+        let leftBlock = lhs.blockNumber ?? ""
+        let rightBlock = rhs.blockNumber ?? ""
+        if leftBlock != rightBlock { return leftBlock < rightBlock }
+        return lhs.floorNumber < rhs.floorNumber
+    }
+
     private func reload() async {
         isLoading = true
         errorMessage = nil
@@ -279,8 +295,8 @@ struct PropertyDetailView: View {
             async let loadedFloors = appState.api.floors(propertyId: property.id)
             async let loadedAttachments = appState.api.propertyAttachments(propertyId: property.id)
             units = try await loadedUnits
-            blocks = (try? await loadedBlocks) ?? []
-            floors = (try? await loadedFloors) ?? []
+            blocks = try await loadedBlocks
+            floors = try await loadedFloors
             if canViewMedia {
                 attachments = (try? await loadedAttachments) ?? []
             }
@@ -590,14 +606,24 @@ private struct AddUnitSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     let propertyId: UUID
-    let floors: [FloorItem]
+    let initialFloors: [FloorItem]
     var onSaved: () async -> Void
 
+    @State private var floors: [FloorItem]
     @State private var selectedFloorId: UUID?
     @State private var unitNumber = ""
     @State private var unitType: UnitTypeOption = .TWO_BHK
     @State private var errorMessage: String?
     @State private var isSaving = false
+    @State private var isLoadingFloors = false
+
+    init(propertyId: UUID, initialFloors: [FloorItem], onSaved: @escaping () async -> Void) {
+        self.propertyId = propertyId
+        self.initialFloors = initialFloors
+        self.onSaved = onSaved
+        _floors = State(initialValue: Self.sortedFloors(initialFloors))
+        _selectedFloorId = State(initialValue: Self.sortedFloors(initialFloors).first?.id)
+    }
 
     private static let commonLayouts: [UnitTypeOption] = [.ONE_BHK, .TWO_BHK, .THREE_BHK, .FOUR_BHK]
     private static let otherLayouts: [UnitTypeOption] = [
@@ -605,20 +631,36 @@ private struct AddUnitSheet: View {
         .FIVE_BHK, .SIX_BHK, .SEVEN_BHK, .EIGHT_BHK, .NINE_BHK, .TEN_BHK
     ]
 
+    private var sortedFloors: [FloorItem] { Self.sortedFloors(floors) }
+
+    private static func sortedFloors(_ floors: [FloorItem]) -> [FloorItem] {
+        floors.sorted { lhs, rhs in
+            let leftBlock = lhs.blockNumber ?? ""
+            let rightBlock = rhs.blockNumber ?? ""
+            if leftBlock != rightBlock { return leftBlock < rightBlock }
+            return lhs.floorNumber < rhs.floorNumber
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    if floors.isEmpty {
-                        Text("Add a floor before creating units.")
+                    if isLoadingFloors && floors.isEmpty {
+                        ProgressView("Loading floors…")
+                    } else if floors.isEmpty {
+                        Text("No floors on this property yet. Create the property with a floor count, or add a floor first.")
                             .foregroundStyle(NriTheme.terracotta)
                     } else {
                         Picker("Floor", selection: $selectedFloorId) {
                             Text("Select floor").tag(Optional<UUID>.none)
-                            ForEach(floors) { floor in
+                            ForEach(sortedFloors) { floor in
                                 Text(floorPickerLabel(floor)).tag(Optional(floor.id))
                             }
                         }
+                        Text("\(sortedFloors.count) floor\(sortedFloors.count == 1 ? "" : "s") available")
+                            .font(.footnote)
+                            .foregroundStyle(NriTheme.slate)
                     }
                     TextField("Unit number (e.g. 201)", text: $unitNumber)
                         .textInputAutocapitalization(.characters)
@@ -628,46 +670,22 @@ private struct AddUnitSheet: View {
 
                 Section {
                     ForEach(Self.commonLayouts) { option in
-                        Button {
-                            unitType = option
-                        } label: {
-                            HStack {
-                                Text(option.title)
-                                    .foregroundStyle(NriTheme.ink)
-                                Spacer()
-                                if unitType == option {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(NriTheme.teal)
-                                }
-                            }
-                        }
+                        unitTypeRow(option)
                     }
                 } header: {
                     Text("BHK layout")
                 } footer: {
-                    Text("Required. Map this flat to its layout — for example unit 201 as 2 BHK, unit 301 as 3 BHK.")
+                    Text("Required. Saves as \(unitType.rawValue) (for example 2 BHK → TWO_BHK).")
                 }
 
                 Section {
                     ForEach(Self.otherLayouts) { option in
-                        Button {
-                            unitType = option
-                        } label: {
-                            HStack {
-                                Text(option.title)
-                                    .foregroundStyle(NriTheme.ink)
-                                Spacer()
-                                if unitType == option {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .foregroundStyle(NriTheme.teal)
-                                }
-                            }
-                        }
+                        unitTypeRow(option)
                     }
                 } header: {
                     Text("Specialty layouts")
                 } footer: {
-                    Text("Selected layout: \(unitType.title)")
+                    Text("Selected: \(unitType.title)")
                 }
 
                 if let errorMessage {
@@ -680,14 +698,10 @@ private struct AddUnitSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { Task { await save() } }
-                        .disabled(isSaving)
+                        .disabled(isSaving || floors.isEmpty)
                 }
             }
-            .onAppear {
-                if selectedFloorId == nil {
-                    selectedFloorId = floors.first?.id
-                }
-            }
+            .task { await refreshFloors() }
         }
     }
 
@@ -696,6 +710,41 @@ private struct AddUnitSheet: View {
             return "Block \(block) · Floor \(floor.floorNumber)"
         }
         return "Floor \(floor.floorNumber)"
+    }
+
+    @ViewBuilder
+    private func unitTypeRow(_ option: UnitTypeOption) -> some View {
+        Button {
+            unitType = option
+        } label: {
+            HStack {
+                Text(option.title)
+                    .foregroundStyle(NriTheme.ink)
+                Spacer()
+                if unitType == option {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(NriTheme.teal)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.borderless)
+    }
+
+    private func refreshFloors() async {
+        isLoadingFloors = true
+        defer { isLoadingFloors = false }
+        do {
+            let loaded = try await appState.api.floors(propertyId: propertyId)
+            floors = Self.sortedFloors(loaded)
+            if selectedFloorId == nil || !floors.contains(where: { $0.id == selectedFloorId }) {
+                selectedFloorId = floors.first?.id
+            }
+        } catch {
+            if floors.isEmpty {
+                errorMessage = error.localizedDescription
+            }
+        }
     }
 
     private func save() async {
@@ -716,6 +765,7 @@ private struct AddUnitSheet: View {
         errorMessage = nil
         defer { isSaving = false }
         do {
+            // unitType.rawValue is TWO_BHK / THREE_BHK — matches backend UnitType enum.
             _ = try await appState.api.createUnit(
                 propertyId: propertyId,
                 CreateUnitBody(

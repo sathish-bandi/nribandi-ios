@@ -50,7 +50,7 @@ struct PropertyFormView: View {
                     TextField("Pincode", text: $pincode)
                         .keyboardType(.numberPad)
                     Stepper(value: $numberOfFloors, in: 1...200) {
-                        Text("Floors: \(numberOfFloors)")
+                        Text("Structure floors: \(numberOfFloors)")
                     }
                     Picker("Type", selection: $propertyType) {
                         ForEach(PropertyTypeOption.allCases) { option in
@@ -65,7 +65,11 @@ struct PropertyFormView: View {
                 } header: {
                     Text("Property")
                 } footer: {
-                    Text("After saving, add blocks (if apartment/high-rise), floors, then units with 1/2/3 BHK layouts.")
+                    if propertyType.usesBlocks {
+                        Text("Saving creates Block A and floors 1…\(numberOfFloors). Add more towers if needed, then add units and map each to a BHK layout.")
+                    } else {
+                        Text("Saving creates floors 1…\(numberOfFloors). Then add units and map each to a BHK layout.")
+                    }
                 }
 
                 if isCreate && needsOwnerPicker {
