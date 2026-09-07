@@ -51,6 +51,7 @@ struct InvoicesView: View {
                     }
                 }
                 .listStyle(.plain)
+                .nriScrollable()
                 .refreshable { await load() }
             }
         }

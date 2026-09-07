@@ -67,6 +67,7 @@ struct ServiceRequestsView: View {
                         }
                     }
                     .listStyle(.plain)
+                    .nriScrollable()
                     .refreshable { await load() }
                 }
             }

@@ -111,6 +111,13 @@ struct StatusChip: View {
     }
 }
 
+extension View {
+    /// Keep scroll bars visible so Mac / Simulator users can see when content overflows.
+    func nriScrollable() -> some View {
+        self.scrollIndicators(.visible)
+    }
+}
+
 /// Wraps content in `NavigationStack` only when the view is shown outside a parent stack (e.g. Ops hub).
 struct OpsOptionalNavigationStack: ViewModifier {
     let enabled: Bool

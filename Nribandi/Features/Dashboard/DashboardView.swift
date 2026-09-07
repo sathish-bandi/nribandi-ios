@@ -117,6 +117,7 @@ struct DashboardView: View {
                         }
                         .padding()
                     }
+                    .nriScrollable()
                     .refreshable { await load() }
                     .onAppear {
                         withAnimation { cardsVisible = true }
@@ -266,6 +267,7 @@ struct DashboardMetricDetailView: View {
                     }
                 }
                 .listStyle(.plain)
+                .nriScrollable()
             }
         }
         .navigationTitle(metric.title)

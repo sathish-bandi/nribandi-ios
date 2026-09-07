@@ -57,6 +57,7 @@ struct InspectionsView: View {
                     }
                 }
                 .listStyle(.plain)
+                .nriScrollable()
                 .refreshable { await load() }
             }
         }

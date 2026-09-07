@@ -84,6 +84,7 @@ struct ProfileView: View {
                     }
                 }
             }
+            .nriScrollable()
             .navigationTitle("Profile")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

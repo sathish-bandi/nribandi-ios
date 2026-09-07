@@ -115,6 +115,7 @@ struct UnitDetailView: View {
                 }
             }
         }
+        .nriScrollable()
         .navigationTitle(unit.title)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAssignTenancy) {

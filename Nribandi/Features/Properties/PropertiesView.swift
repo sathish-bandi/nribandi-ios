@@ -41,6 +41,7 @@ struct PropertiesView: View {
                         }
                     }
                     .listStyle(.plain)
+                    .nriScrollable()
                     .navigationDestination(for: PropertyItem.self) { PropertyDetailView(property: $0) }
                     .refreshable { await load() }
                 }

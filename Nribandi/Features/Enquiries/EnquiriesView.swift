@@ -36,6 +36,7 @@ struct EnquiriesView: View {
                     }
                 }
                 .listStyle(.plain)
+                .nriScrollable()
                 .refreshable { await load() }
             }
         }

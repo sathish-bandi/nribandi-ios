@@ -77,6 +77,7 @@ struct UserListView: View {
                     }
                 }
                 .listStyle(.plain)
+                    .nriScrollable()
                 .navigationDestination(for: ManagedUserItem.self) { user in
                     UserDetailView(user: user, onChanged: { await load() })
                 }

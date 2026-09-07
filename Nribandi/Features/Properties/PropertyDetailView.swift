@@ -70,7 +70,7 @@ struct PropertyDetailView: View {
                         Text("No photos or videos yet.")
                             .foregroundStyle(NriTheme.slate)
                     } else {
-                        ScrollView(.horizontal, showsIndicators: false) {
+                        ScrollView(.horizontal) {
                             HStack(spacing: 12) {
                                 ForEach(attachments) { attachment in
                                     PropertyAttachmentThumb(
@@ -84,6 +84,10 @@ struct PropertyDetailView: View {
                             }
                             .padding(.vertical, 4)
                         }
+                        .scrollIndicators(.visible)
+                        .frame(minHeight: 112)
+                        // Keep vertical List scrolling reliable next to a nested gallery.
+                        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
                     }
 
                     if canManageStructure {
@@ -181,6 +185,7 @@ struct PropertyDetailView: View {
                 }
             }
         }
+        .nriScrollable()
         .navigationTitle(property.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
