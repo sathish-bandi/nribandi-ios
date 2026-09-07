@@ -18,6 +18,18 @@ struct ProfileView: View {
                     }
                 }
 
+                // Keep Sign out above optional/long sections so it stays on-screen
+                // on Mac and iPhone without scrolling past Ops + environment controls.
+                Section {
+                    Button(role: .destructive) {
+                        Task { await session.logout() }
+                    } label: {
+                        Label("Sign out", systemImage: "rectangle.portrait.and.arrow.right")
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .accessibilityIdentifier("profile.signOut")
+                }
+
                 if role == .TENANT {
                     Section("Verification") {
                         NavigationLink("My KYC") {
@@ -56,16 +68,19 @@ struct ProfileView: View {
                             .foregroundStyle(NriTheme.slate)
                     }
                 }
-                Section {
-                    Button("Sign out", role: .destructive) {
-                        Task { await session.logout() }
-                    }
-                }
             }
             .navigationTitle("Profile")
             .toolbar {
-                if AppEnvironment.allowsEnvironmentSelection {
-                    ToolbarItem(placement: .topBarTrailing) { EnvBadge(env: appState.environment) }
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack(spacing: 12) {
+                        if AppEnvironment.allowsEnvironmentSelection {
+                            EnvBadge(env: appState.environment)
+                        }
+                        Button("Sign out", role: .destructive) {
+                            Task { await session.logout() }
+                        }
+                        .accessibilityIdentifier("profile.toolbar.signOut")
+                    }
                 }
             }
         }
