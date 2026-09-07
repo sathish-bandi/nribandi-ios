@@ -27,7 +27,9 @@ struct EnquiriesView: View {
                             HStack {
                                 StatusChip(text: item.source)
                                 StatusChip(text: item.status)
-                                if let unit = item.requestedUnitType { StatusChip(text: unit) }
+                                if let unit = item.requestedUnitType {
+                                    StatusChip(text: UnitTypeDisplay.title(for: unit), emphasized: true)
+                                }
                             }
                         }
                         .padding(.vertical, 4)
@@ -105,7 +107,7 @@ struct EnquiryDetailView: View {
                             LabeledContent("Locality", value: locality)
                         }
                         if let unit = item.requestedUnitType {
-                            LabeledContent("Unit type", value: unit)
+                            LabeledContent("Unit type", value: UnitTypeDisplay.title(for: unit))
                         }
                         if let budget = item.budget {
                             LabeledContent("Budget", value: NriFormat.decimal(budget))
