@@ -76,8 +76,9 @@ struct UserListView: View {
                         .padding(.vertical, 2)
                     }
                 }
-                .listStyle(.plain)
+                .listStyle(.insetGrouped)
                     .nriScrollable()
+                    .nriPhoneScrollInsets()
                 .navigationDestination(for: ManagedUserItem.self) { user in
                     UserDetailView(user: user, onChanged: { await load() })
                 }

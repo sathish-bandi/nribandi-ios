@@ -366,7 +366,9 @@ struct KycReviewListView: View {
                         .padding(.vertical, 2)
                     }
                 }
-                .listStyle(.plain)
+                .listStyle(.insetGrouped)
+                .nriScrollable()
+                .nriPhoneScrollInsets()
                 .refreshable { await load() }
             }
         }

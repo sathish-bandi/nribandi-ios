@@ -118,6 +118,7 @@ struct DashboardView: View {
                         .padding()
                     }
                     .nriScrollable()
+                    .nriPhoneScrollInsets()
                     .refreshable { await load() }
                     .onAppear {
                         withAnimation { cardsVisible = true }
@@ -266,8 +267,9 @@ struct DashboardMetricDetailView: View {
                         }
                     }
                 }
-                .listStyle(.plain)
+                .listStyle(.insetGrouped)
                 .nriScrollable()
+                .nriPhoneScrollInsets()
             }
         }
         .navigationTitle(metric.title)

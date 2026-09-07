@@ -112,9 +112,52 @@ struct StatusChip: View {
 }
 
 extension View {
-    /// Keep scroll bars visible so Mac / Simulator users can see when content overflows.
+    /// Visible indicators + always bounce so every iPhone can scroll/discover overflow.
     func nriScrollable() -> some View {
-        self.scrollIndicators(.visible)
+        self
+            .scrollIndicators(.visible)
+            .scrollBounceBehavior(.always)
+    }
+
+    /// Keeps the last rows clear of the tab bar and home indicator on all iPhones.
+    func nriPhoneScrollInsets() -> some View {
+        self
+            .contentMargins(.bottom, 28, for: .scrollContent)
+            .safeAreaPadding(.bottom, 8)
+    }
+}
+
+/// Simple section chrome for ScrollView-based screens (avoids nested List scroll bugs on Mac).
+struct NriSectionCard<Content: View>: View {
+    let title: String?
+    var footer: String? = nil
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let title, !title.isEmpty {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(NriTheme.slate)
+                    .textCase(.uppercase)
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                content()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(NriTheme.sage.opacity(0.35), lineWidth: 1)
+            }
+            if let footer, !footer.isEmpty {
+                Text(footer)
+                    .font(.caption)
+                    .foregroundStyle(NriTheme.slate)
+                    .padding(.horizontal, 4)
+            }
+        }
     }
 }
 

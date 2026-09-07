@@ -50,8 +50,9 @@ struct InvoicesView: View {
                         .padding(.vertical, 4)
                     }
                 }
-                .listStyle(.plain)
+                .listStyle(.insetGrouped)
                 .nriScrollable()
+                .nriPhoneScrollInsets()
                 .refreshable { await load() }
             }
         }

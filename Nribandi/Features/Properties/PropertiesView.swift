@@ -27,21 +27,36 @@ struct PropertiesView: View {
                         description: Text(canManageProperties ? "Tap + to add a property." : "Nothing visible for this account yet.")
                     )
                 } else {
-                    List(items) { property in
-                        NavigationLink(value: property) {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(property.name).font(.headline).foregroundStyle(NriTheme.ink)
-                                Text(property.locationLine).font(.subheadline).foregroundStyle(NriTheme.slate)
-                                HStack {
-                                    StatusChip(text: property.propertyType)
-                                    StatusChip(text: property.propertyPurpose)
+                    ScrollView(.vertical) {
+                        VStack(spacing: 12) {
+                            ForEach(items) { property in
+                                NavigationLink(value: property) {
+                                    VStack(alignment: .leading, spacing: 6) {
+                                        Text(property.name).font(.headline).foregroundStyle(NriTheme.ink)
+                                        Text(property.locationLine).font(.subheadline).foregroundStyle(NriTheme.slate)
+                                        HStack {
+                                            StatusChip(text: property.propertyType)
+                                            StatusChip(text: property.propertyPurpose)
+                                        }
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(14)
+                                    .background(.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                            .strokeBorder(NriTheme.sage.opacity(0.35), lineWidth: 1)
+                                    }
                                 }
+                                .buttonStyle(.plain)
                             }
-                            .padding(.vertical, 4)
                         }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 12)
+                        .padding(.bottom, 24)
                     }
-                    .listStyle(.plain)
+                    .background(NriTheme.pageBackground.ignoresSafeArea())
                     .nriScrollable()
+                    .nriPhoneScrollInsets()
                     .navigationDestination(for: PropertyItem.self) { PropertyDetailView(property: $0) }
                     .refreshable { await load() }
                 }

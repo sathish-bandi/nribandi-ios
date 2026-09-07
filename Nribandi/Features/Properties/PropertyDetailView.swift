@@ -49,29 +49,38 @@ struct PropertyDetailView: View {
     }
 
     var body: some View {
-        List {
-            Section("Address") {
-                Text(property.address)
-                Text(property.locationLine).foregroundStyle(NriTheme.slate)
-                Text("\(property.state) · \(property.propertyType) · \(property.propertyPurpose)")
-                    .font(.footnote)
-                    .foregroundStyle(NriTheme.slate)
-                if let ownerName = property.ownerName {
-                    Text("Owner: \(ownerName)").font(.footnote).foregroundStyle(NriTheme.slate)
+        ScrollView(.vertical) {
+            VStack(alignment: .leading, spacing: 16) {
+                NriSectionCard(title: "Address") {
+                    Text(property.address)
+                    Text(property.locationLine).foregroundStyle(NriTheme.slate)
+                    Text("\(property.state) · \(property.propertyType) · \(property.propertyPurpose)")
+                        .font(.footnote)
+                        .foregroundStyle(NriTheme.slate)
+                    if let ownerName = property.ownerName {
+                        Text("Owner: \(ownerName)").font(.footnote).foregroundStyle(NriTheme.slate)
+                    }
+                    if property.isActive == false {
+                        StatusChip(text: "INACTIVE")
+                    }
                 }
-                if property.isActive == false {
-                    StatusChip(text: "INACTIVE")
-                }
-            }
 
-            if canViewMedia {
-                Section {
-                    if attachments.isEmpty {
-                        Text("No photos or videos yet.")
-                            .foregroundStyle(NriTheme.slate)
-                    } else {
-                        ScrollView(.horizontal) {
-                            HStack(spacing: 12) {
+                if canViewMedia {
+                    NriSectionCard(
+                        title: "Gallery",
+                        footer: canManageStructure
+                            ? "Admins can upload images or videos for listings and walkthroughs."
+                            : nil
+                    ) {
+                        if attachments.isEmpty {
+                            Text("No photos or videos yet.")
+                                .foregroundStyle(NriTheme.slate)
+                        } else {
+                            // Grid inside the page ScrollView — no nested horizontal ScrollView.
+                            LazyVGrid(
+                                columns: [GridItem(.adaptive(minimum: 110), spacing: 12)],
+                                spacing: 12
+                            ) {
                                 ForEach(attachments) { attachment in
                                     PropertyAttachmentThumb(
                                         attachment: attachment,
@@ -82,110 +91,107 @@ struct PropertyDetailView: View {
                                     )
                                 }
                             }
-                            .padding(.vertical, 4)
-                        }
-                        .scrollIndicators(.visible)
-                        .frame(minHeight: 112)
-                        // Keep vertical List scrolling reliable next to a nested gallery.
-                        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-                    }
-
-                    if canManageStructure {
-                        PhotosPicker(
-                            selection: $photoItems,
-                            maxSelectionCount: 6,
-                            matching: .any(of: [.images, .videos])
-                        ) {
-                            Label(isUploadingMedia ? "Uploading…" : "Add photos / videos", systemImage: "photo.on.rectangle")
-                        }
-                        .disabled(isUploadingMedia)
-                        .onChange(of: photoItems) { _, newItems in
-                            guard !newItems.isEmpty else { return }
-                            Task { await uploadPhotoItems(newItems) }
                         }
 
-                        Button {
-                            showFileImporter = true
-                        } label: {
-                            Label("Import file", systemImage: "folder")
-                        }
-                        .disabled(isUploadingMedia)
-                    }
-                } header: {
-                    Text("Gallery")
-                } footer: {
-                    if canManageStructure {
-                        Text("Admins can upload images or videos for listings and walkthroughs.")
-                    }
-                }
-            }
-
-            if !blocks.isEmpty {
-                Section("Blocks") {
-                    ForEach(blocks) { block in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Block \(block.blockNumber)").font(.subheadline.weight(.semibold))
-                            if let name = block.name, !name.isEmpty {
-                                Text(name).font(.footnote).foregroundStyle(NriTheme.slate)
+                        if canManageStructure {
+                            PhotosPicker(
+                                selection: $photoItems,
+                                maxSelectionCount: 6,
+                                matching: .any(of: [.images, .videos])
+                            ) {
+                                Label(isUploadingMedia ? "Uploading…" : "Add photos / videos", systemImage: "photo.on.rectangle")
                             }
+                            .disabled(isUploadingMedia)
+                            .onChange(of: photoItems) { _, newItems in
+                                guard !newItems.isEmpty else { return }
+                                Task { await uploadPhotoItems(newItems) }
+                            }
+
+                            Button {
+                                showFileImporter = true
+                            } label: {
+                                Label("Import file", systemImage: "folder")
+                            }
+                            .disabled(isUploadingMedia)
                         }
                     }
                 }
-            }
 
-            if !floors.isEmpty {
-                Section("Floors") {
-                    ForEach(floors) { floor in
-                        Text(floorLabel(floor))
-                            .font(.subheadline)
-                    }
-                }
-            }
-
-            Section("Units") {
-                if isLoading {
-                    ProgressView()
-                } else if let errorMessage {
-                    Text(errorMessage).foregroundStyle(NriTheme.terracotta)
-                } else if units.isEmpty {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(structureHint)
-                            .foregroundStyle(NriTheme.slate)
-                        Text("When adding a unit, choose the BHK layout (1 BHK, 2 BHK, 3 BHK, …) for that floor.")
-                            .font(.footnote)
-                            .foregroundStyle(NriTheme.slate)
-                    }
-                } else {
-                    ForEach(units) { unit in
-                        NavigationLink {
-                            UnitDetailView(unit: unit, propertyName: property.name)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(unit.title).font(.subheadline.weight(.semibold))
-                                StatusChip(text: UnitTypeDisplay.title(for: unit.unitType), emphasized: true)
-                                HStack {
-                                    StatusChip(text: unit.occupancyStatus)
-                                    StatusChip(text: unit.toLetBoardStatus)
+                if !blocks.isEmpty {
+                    NriSectionCard(title: "Blocks") {
+                        ForEach(blocks) { block in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Block \(block.blockNumber)").font(.subheadline.weight(.semibold))
+                                if let name = block.name, !name.isEmpty {
+                                    Text(name).font(.footnote).foregroundStyle(NriTheme.slate)
                                 }
                             }
-                            .padding(.vertical, 2)
                         }
                     }
                 }
-            }
 
-            if canManageStructure {
-                Section {
-                    Button("Delete property", role: .destructive) {
-                        showDeleteConfirm = true
+                if !floors.isEmpty {
+                    NriSectionCard(title: "Floors") {
+                        ForEach(floors) { floor in
+                            Text(floorLabel(floor))
+                                .font(.subheadline)
+                        }
                     }
-                    .disabled(isDeleting || property.isActive == false)
-                } footer: {
-                    Text("Soft-deletes the property (marks inactive). Related tenancies and tickets stay intact.")
+                }
+
+                NriSectionCard(title: "Units") {
+                    if isLoading {
+                        ProgressView()
+                    } else if let errorMessage {
+                        Text(errorMessage).foregroundStyle(NriTheme.terracotta)
+                    } else if units.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(structureHint)
+                                .foregroundStyle(NriTheme.slate)
+                            Text("When adding a unit, choose the BHK layout (1 BHK, 2 BHK, 3 BHK, …) for that floor.")
+                                .font(.footnote)
+                                .foregroundStyle(NriTheme.slate)
+                        }
+                    } else {
+                        ForEach(units) { unit in
+                            NavigationLink {
+                                UnitDetailView(unit: unit, propertyName: property.name)
+                            } label: {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    Text(unit.title).font(.subheadline.weight(.semibold))
+                                    StatusChip(text: UnitTypeDisplay.title(for: unit.unitType), emphasized: true)
+                                    HStack {
+                                        StatusChip(text: unit.occupancyStatus)
+                                        StatusChip(text: unit.toLetBoardStatus)
+                                    }
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.vertical, 4)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                if canManageStructure {
+                    NriSectionCard(
+                        title: nil,
+                        footer: "Soft-deletes the property (marks inactive). Related tenancies and tickets stay intact."
+                    ) {
+                        Button("Delete property", role: .destructive) {
+                            showDeleteConfirm = true
+                        }
+                        .disabled(isDeleting || property.isActive == false)
+                    }
                 }
             }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .padding(.bottom, 24)
         }
+        .background(NriTheme.pageBackground.ignoresSafeArea())
         .nriScrollable()
+        .nriPhoneScrollInsets()
         .navigationTitle(property.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -388,7 +394,8 @@ private struct PropertyAttachmentThumb: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
                     .fill(NriTheme.mist)
-                    .frame(width: 120, height: 90)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 90)
                 if attachment.isVideo {
                     Image(systemName: "video.fill")
                         .font(.title2)
@@ -402,7 +409,7 @@ private struct PropertyAttachmentThumb: View {
             Text(attachment.originalFilename ?? "Media")
                 .font(.caption2)
                 .lineLimit(1)
-                .frame(width: 120, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
             if canDelete {
                 Button("Delete", role: .destructive, action: onDelete)
                     .font(.caption2)

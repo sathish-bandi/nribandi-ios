@@ -84,7 +84,9 @@ struct ProfileView: View {
                     }
                 }
             }
+            .listStyle(.insetGrouped)
             .nriScrollable()
+            .nriPhoneScrollInsets()
             .navigationTitle("Profile")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

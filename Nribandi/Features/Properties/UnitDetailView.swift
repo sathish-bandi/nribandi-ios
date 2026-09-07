@@ -115,7 +115,9 @@ struct UnitDetailView: View {
                 }
             }
         }
+        .listStyle(.insetGrouped)
         .nriScrollable()
+        .nriPhoneScrollInsets()
         .navigationTitle(unit.title)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAssignTenancy) {
