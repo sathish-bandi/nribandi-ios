@@ -38,6 +38,9 @@ Then in Xcode press **Run (⌘R)**. Keep environment **Local**.
 
 Login: `admin@nribandi.local` / `Nribandi@123`
 
+To verify tenant detail + permanent address: People → Tenants → **Priya Menon**
+(or sign in as `priya.menon@nribandi.local` / `Nribandi@123`). Requires local seed.
+
 The backend must be started separately from
 [`rental-property-app`](https://github.com/sathish-bandi/rental-property-app)
 (`./scripts/local-up.sh` or `START-ON-MAC.command` there).
