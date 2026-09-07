@@ -57,10 +57,11 @@ struct PropertiesView: View {
                     .background(NriTheme.pageBackground.ignoresSafeArea())
                     .nriScrollable()
                     .nriPhoneScrollInsets()
-                    .navigationDestination(for: PropertyItem.self) { PropertyDetailView(property: $0) }
                     .refreshable { await load() }
                 }
             }
+            // Keep destination on stable NavigationStack content — not inside the List/ScrollView branch.
+            .navigationDestination(for: PropertyItem.self) { PropertyDetailView(property: $0) }
             .navigationTitle("Properties")
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

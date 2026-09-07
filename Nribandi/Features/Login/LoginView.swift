@@ -117,6 +117,7 @@ struct LoginView: View {
                 .padding(24)
             }
             .nriScrollable()
+            .nriPhoneScrollInsets()
             .background(NriTheme.pageBackground.ignoresSafeArea())
             .onAppear {
                 withAnimation(.easeOut(duration: 0.65).delay(0.15)) {

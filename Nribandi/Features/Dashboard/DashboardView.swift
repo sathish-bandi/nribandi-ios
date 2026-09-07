@@ -158,7 +158,7 @@ struct DashboardMetricDetailView: View {
 
     var body: some View {
         Group {
-            if isLoading {
+            if isLoading && isEmpty {
                 ProgressView("Loading \(metric.title.lowercased())…")
             } else if let errorMessage, isEmpty {
                 ContentUnavailableView(
@@ -272,6 +272,7 @@ struct DashboardMetricDetailView: View {
                 .nriPhoneScrollInsets()
             }
         }
+        // Destinations stay on the always-present Group, not inside loading branches.
         .navigationTitle(metric.title)
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(for: PropertyItem.self) { PropertyDetailView(property: $0) }

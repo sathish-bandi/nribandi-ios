@@ -47,6 +47,8 @@ struct UserListView: View {
     @State private var showCreate = false
 
     var body: some View {
+        // Keep list chrome stable: avoid value-based NavigationLink +
+        // `.navigationDestination` inside loading conditionals (SwiftUI double-push).
         Group {
             if isLoading && items.isEmpty {
                 ProgressView("Loading \(title.lowercased())…")
@@ -60,7 +62,9 @@ struct UserListView: View {
                 )
             } else {
                 List(items) { user in
-                    NavigationLink(value: user) {
+                    NavigationLink {
+                        UserDetailView(user: user, onChanged: { await load() })
+                    } label: {
                         VStack(alignment: .leading, spacing: 4) {
                             HStack {
                                 Text(user.fullName).font(.headline)
@@ -77,11 +81,8 @@ struct UserListView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
-                    .nriScrollable()
-                    .nriPhoneScrollInsets()
-                .navigationDestination(for: ManagedUserItem.self) { user in
-                    UserDetailView(user: user, onChanged: { await load() })
-                }
+                .nriScrollable()
+                .nriPhoneScrollInsets()
             }
         }
         .navigationTitle(title)
@@ -120,11 +121,18 @@ struct UserDetailView: View {
     @State private var showEdit = false
     @State private var errorMessage: String?
     @State private var isWorking = false
+    @State private var verification: TenantVerificationItem?
+    @State private var kycLoading = false
+    @State private var kycError: String?
 
     init(user: ManagedUserItem, onChanged: @escaping () async -> Void) {
         self.user = user
         self.onChanged = onChanged
         _current = State(initialValue: user)
+    }
+
+    private var canReviewKyc: Bool {
+        session.user?.role == .ADMIN || session.user?.role == .EMPLOYEE
     }
 
     var body: some View {
@@ -137,18 +145,7 @@ struct UserDetailView: View {
                 LabeledContent("Status", value: current.active ? "Active" : "Inactive")
             }
             if current.role == .TENANT {
-                Section("KYC") {
-                    NavigationLink("Open tenant verification") {
-                        TenantVerificationView(
-                            tenantUserId: current.id,
-                            tenantName: current.fullName,
-                            reviewMode: session.user?.role == .ADMIN || session.user?.role == .EMPLOYEE
-                        )
-                    }
-                    Text("Tenants complete KYC (ID + permanent address) from Profile → My KYC. Staff can review from here or Ops.")
-                        .font(.footnote)
-                        .foregroundStyle(NriTheme.slate)
-                }
+                tenantKycSection
             }
             if let errorMessage {
                 Section {
@@ -170,6 +167,9 @@ struct UserDetailView: View {
                 }
             }
         }
+        .listStyle(.insetGrouped)
+        .nriScrollable()
+        .nriPhoneScrollInsets()
         .navigationTitle(current.fullName)
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showEdit) {
@@ -177,6 +177,65 @@ struct UserDetailView: View {
                 await reload()
                 await onChanged()
             }
+        }
+        .task(id: current.id) {
+            if current.role == .TENANT {
+                await loadKyc()
+            }
+        }
+        .refreshable {
+            await reload()
+            if current.role == .TENANT {
+                await loadKyc()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var tenantKycSection: some View {
+        Section("Permanent address (KYC)") {
+            if kycLoading && verification == nil && kycError == nil {
+                ProgressView("Loading KYC…")
+            } else if let kycError {
+                Text(kycError)
+                    .font(.footnote)
+                    .foregroundStyle(NriTheme.terracotta)
+            } else if let verification, verification.hasPermanentAddress || !(verification.permanentAddress ?? "").isEmpty {
+                LabeledContent("Address", value: verification.permanentAddress ?? "—")
+                LabeledContent("Locality", value: verification.permanentLocality ?? "—")
+                LabeledContent("City", value: verification.permanentCity ?? "—")
+                LabeledContent("State", value: verification.permanentState ?? "—")
+                LabeledContent("Pincode", value: verification.permanentPincode ?? "—")
+                LabeledContent("Status", value: verification.status)
+                LabeledContent("ID verified", value: (verification.idVerified == true) ? "Yes" : "No")
+            } else {
+                Text("No KYC yet. This tenant has not saved a permanent address.")
+                    .font(.subheadline)
+                    .foregroundStyle(NriTheme.slate)
+                Text("They can complete KYC from Profile → My KYC.")
+                    .font(.footnote)
+                    .foregroundStyle(NriTheme.slate)
+            }
+
+            NavigationLink("Open full tenant verification") {
+                TenantVerificationView(
+                    tenantUserId: current.id,
+                    tenantName: current.fullName,
+                    reviewMode: canReviewKyc
+                )
+            }
+        }
+    }
+
+    private func loadKyc() async {
+        kycLoading = true
+        kycError = nil
+        defer { kycLoading = false }
+        do {
+            verification = try await appState.api.tenantVerification(tenantUserId: current.id)
+        } catch {
+            verification = nil
+            kycError = error.localizedDescription
         }
     }
 
