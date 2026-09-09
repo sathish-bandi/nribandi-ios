@@ -34,6 +34,10 @@ struct PropertyDetailView: View {
         session.user?.role == .ADMIN
     }
 
+    private var isTenant: Bool {
+        session.user?.role == .TENANT
+    }
+
     private var canViewMedia: Bool {
         let role = session.user?.role
         return role == .ADMIN || role == .OWNER || role == .EMPLOYEE
@@ -68,17 +72,26 @@ struct PropertyDetailView: View {
                         .background(NriTheme.sand, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 }
 
-                NriSectionCard(title: "Address") {
+                NriSectionCard(title: isTenant ? "Your home" : "Address") {
                     Text(property.address)
                     Text(property.locationLine).foregroundStyle(NriTheme.slate)
-                    Text("\(property.state) · \(property.propertyType) · \(property.propertyPurpose)")
-                        .font(.footnote)
-                        .foregroundStyle(NriTheme.slate)
-                    if let ownerName = property.ownerName {
-                        Text("Owner: \(ownerName)").font(.footnote).foregroundStyle(NriTheme.slate)
-                    }
-                    if property.isActive == false {
-                        StatusChip(text: "INACTIVE")
+                    if isTenant {
+                        Text(property.name)
+                            .font(.footnote)
+                            .foregroundStyle(NriTheme.slate)
+                        if let ownerName = property.ownerName {
+                            Text("Owner: \(ownerName)").font(.footnote).foregroundStyle(NriTheme.slate)
+                        }
+                    } else {
+                        Text("\(property.state) · \(property.propertyType) · \(property.propertyPurpose)")
+                            .font(.footnote)
+                            .foregroundStyle(NriTheme.slate)
+                        if let ownerName = property.ownerName {
+                            Text("Owner: \(ownerName)").font(.footnote).foregroundStyle(NriTheme.slate)
+                        }
+                        if property.isActive == false {
+                            StatusChip(text: "INACTIVE")
+                        }
                     }
                 }
 
@@ -134,39 +147,47 @@ struct PropertyDetailView: View {
                     }
                 }
 
-                if !blocks.isEmpty {
-                    NriSectionCard(title: "Blocks") {
-                        ForEach(blocks) { block in
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Block \(block.blockNumber)").font(.subheadline.weight(.semibold))
-                                if let name = block.name, !name.isEmpty {
-                                    Text(name).font(.footnote).foregroundStyle(NriTheme.slate)
+                // Staff / owner inventory: blocks + floors. Tenants never see building structure.
+                if !isTenant {
+                    if !blocks.isEmpty {
+                        NriSectionCard(title: "Blocks") {
+                            ForEach(blocks) { block in
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Block \(block.blockNumber)").font(.subheadline.weight(.semibold))
+                                    if let name = block.name, !name.isEmpty {
+                                        Text(name).font(.footnote).foregroundStyle(NriTheme.slate)
+                                    }
                                 }
+                            }
+                        }
+                    }
+
+                    if !floors.isEmpty {
+                        NriSectionCard(title: "Floors (\(floors.count))") {
+                            ForEach(floors.sorted(by: floorSort)) { floor in
+                                Text(floorLabel(floor))
+                                    .font(.subheadline)
                             }
                         }
                     }
                 }
 
-                if !floors.isEmpty {
-                    NriSectionCard(title: "Floors (\(floors.count))") {
-                        ForEach(floors.sorted(by: floorSort)) { floor in
-                            Text(floorLabel(floor))
-                                .font(.subheadline)
-                        }
-                    }
-                }
-
-                NriSectionCard(title: "Units") {
+                NriSectionCard(title: isTenant ? "My unit" : "Units") {
                     if isLoading {
                         ProgressView()
                     } else if units.isEmpty {
-                        VStack(alignment: .leading, spacing: 6) {
-                            Text(structureHint)
+                        if isTenant {
+                            Text("No unit is linked to your tenancy yet. Ask your property manager.")
                                 .foregroundStyle(NriTheme.slate)
-                            if floors.isEmpty {
-                                Text("When floors exist, use Add unit (BHK) and choose the layout for each flat.")
-                                    .font(.footnote)
+                        } else {
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text(structureHint)
                                     .foregroundStyle(NriTheme.slate)
+                                if floors.isEmpty {
+                                    Text("When floors exist, use Add unit (BHK) and choose the layout for each flat.")
+                                        .font(.footnote)
+                                        .foregroundStyle(NriTheme.slate)
+                                }
                             }
                         }
                     } else {
@@ -177,30 +198,7 @@ struct PropertyDetailView: View {
                                     await onChanged?()
                                 }
                             } label: {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(unit.title).font(.subheadline.weight(.semibold))
-                                    StatusChip(text: UnitTypeDisplay.title(for: unit.unitType), emphasized: true)
-                                    HStack {
-                                        StatusChip(text: unit.occupancyStatus)
-                                        StatusChip(text: unit.toLetBoardStatus)
-                                    }
-                                    if let tenant = unit.currentTenancy {
-                                        Text("Tenant: \(tenant.tenantName ?? "—") · \(tenant.durationLabel)")
-                                            .font(.footnote)
-                                            .foregroundStyle(NriTheme.slate)
-                                        if tenant.agreementExpiringSoon {
-                                            Text("Agreement renews soon")
-                                                .font(.caption.weight(.semibold))
-                                                .foregroundStyle(NriTheme.terracotta)
-                                        }
-                                    } else if unit.isVacant {
-                                        Text("Vacant — to-let enquiries on unit detail")
-                                            .font(.footnote)
-                                            .foregroundStyle(NriTheme.slate)
-                                    }
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.vertical, 4)
+                                tenantOrStaffUnitLabel(unit)
                             }
                             .buttonStyle(.plain)
                         }
@@ -226,7 +224,7 @@ struct PropertyDetailView: View {
         .background(NriTheme.pageBackground.ignoresSafeArea())
         .nriScrollable()
         .nriPhoneScrollInsets()
-        .navigationTitle(property.name)
+        .navigationTitle(isTenant ? "My home" : property.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -298,6 +296,64 @@ struct PropertyDetailView: View {
         .refreshable { await reload() }
     }
 
+    @ViewBuilder
+    private func tenantOrStaffUnitLabel(_ unit: UnitItem) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if isTenant {
+                Text(tenantUnitHeadline(unit))
+                    .font(.subheadline.weight(.semibold))
+                StatusChip(text: UnitTypeDisplay.title(for: unit.unitType), emphasized: true)
+                if let tenancy = unit.currentTenancy {
+                    Text("Since \(tenancy.moveInDate ?? "—") · \(tenancy.durationLabel)")
+                        .font(.footnote)
+                        .foregroundStyle(NriTheme.slate)
+                    if tenancy.agreementExpiringSoon {
+                        Text("Agreement renews soon")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(NriTheme.terracotta)
+                    }
+                }
+                Text("Tap for agreement, inspections, and tenancy details")
+                    .font(.caption)
+                    .foregroundStyle(NriTheme.slate)
+            } else {
+                Text(unit.title).font(.subheadline.weight(.semibold))
+                StatusChip(text: UnitTypeDisplay.title(for: unit.unitType), emphasized: true)
+                HStack {
+                    StatusChip(text: unit.occupancyStatus)
+                    StatusChip(text: unit.toLetBoardStatus)
+                }
+                if let tenant = unit.currentTenancy {
+                    Text("Tenant: \(tenant.tenantName ?? "—") · \(tenant.durationLabel)")
+                        .font(.footnote)
+                        .foregroundStyle(NriTheme.slate)
+                    if tenant.agreementExpiringSoon {
+                        Text("Agreement renews soon")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(NriTheme.terracotta)
+                    }
+                } else if unit.isVacant {
+                    Text("Vacant — to-let enquiries on unit detail")
+                        .font(.footnote)
+                        .foregroundStyle(NriTheme.slate)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 4)
+    }
+
+    private func tenantUnitHeadline(_ unit: UnitItem) -> String {
+        var parts: [String] = ["Unit \(unit.unitNumber)"]
+        if let block = unit.blockNumber, !block.isEmpty {
+            parts.append("Block \(block)")
+        }
+        if let floor = unit.floorNumber {
+            parts.append("Floor \(floor)")
+        }
+        return parts.joined(separator: " · ")
+    }
+
     private func floorLabel(_ floor: FloorItem) -> String {
         var parts = ["Floor \(floor.floorNumber)"]
         if let block = floor.blockNumber, !block.isEmpty {
@@ -322,14 +378,18 @@ struct PropertyDetailView: View {
         defer { isLoading = false }
         do {
             async let loadedUnits = appState.api.units(propertyId: property.id)
-            async let loadedBlocks = appState.api.blocks(propertyId: property.id)
-            async let loadedFloors = appState.api.floors(propertyId: property.id)
-            async let loadedAttachments = appState.api.propertyAttachments(propertyId: property.id)
             units = try await loadedUnits
-            blocks = try await loadedBlocks
-            floors = try await loadedFloors
+            if !isTenant {
+                async let loadedBlocks = appState.api.blocks(propertyId: property.id)
+                async let loadedFloors = appState.api.floors(propertyId: property.id)
+                blocks = try await loadedBlocks
+                floors = try await loadedFloors
+            } else {
+                blocks = []
+                floors = []
+            }
             if canViewMedia {
-                attachments = (try? await loadedAttachments) ?? []
+                attachments = (try? await appState.api.propertyAttachments(propertyId: property.id)) ?? []
             }
         } catch {
             errorMessage = error.localizedDescription

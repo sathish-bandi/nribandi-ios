@@ -51,6 +51,10 @@ struct UnitDetailView: View {
         role == .ADMIN || role == .EMPLOYEE
     }
 
+    private var isTenantViewer: Bool {
+        role == .TENANT
+    }
+
     private var activeTenancy: TenancyItem? {
         tenancies.first(where: \.active) ?? tenancies.first
     }
@@ -62,14 +66,22 @@ struct UnitDetailView: View {
     var body: some View {
         List {
             occupancySection
-            tenantSection
+            if !isTenantViewer {
+                tenantSection
+            }
             agreementSection
             inspectionsSection
             if canViewEnquiries {
                 enquiriesSection
             }
-            tenancyHistorySection
-            actionsSection
+            if !isTenantViewer {
+                tenancyHistorySection
+            } else {
+                tenantOwnTenancySection
+            }
+            if !isTenantViewer {
+                actionsSection
+            }
             if let errorMessage {
                 Section {
                     Text(errorMessage).foregroundStyle(NriTheme.terracotta)
