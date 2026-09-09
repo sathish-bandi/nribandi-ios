@@ -329,39 +329,14 @@ struct ServiceRequestDetailView: View {
     @State private var showWorkCompleted = false
     @State private var photoItem: PhotosPickerItem?
 
-    private var canCancel: Bool {
-        guard let item, item.canCancel else { return false }
-        let role = session.user?.role
-        return role == .OWNER || role == .TENANT || role == .ADMIN
-    }
+    private var role: UserRole? { session.user?.role }
 
     private var canStaffAct: Bool {
-        let role = session.user?.role
-        return role == .ADMIN || role == .EMPLOYEE
+        role == .ADMIN || role == .EMPLOYEE
     }
 
     private var canAttach: Bool {
-        let role = session.user?.role
-        return role == .ADMIN || role == .EMPLOYEE || role == .OWNER
-    }
-
-    private var canSetEstimate: Bool {
-        guard canStaffAct, let item else { return false }
-        return ["OPEN", "ASSIGNED", "IN_PROGRESS", "WAITING_FOR_PARTS"].contains(item.status)
-            || item.expectedAmount == nil
-    }
-
-    private var canSetPayer: Bool {
-        guard canStaffAct, let item else { return false }
-        return item.expectedAmount != nil
-            && !["CLOSED", "CANCELLED", "REJECTED"].contains(item.status)
-    }
-
-    private var canMarkWorkCompleted: Bool {
-        guard canStaffAct, let item else { return false }
-        return item.workCompleted != true
-            && !["CLOSED", "CANCELLED", "REJECTED"].contains(item.status)
-            && item.payerType != nil
+        role == .ADMIN || role == .EMPLOYEE || role == .OWNER
     }
 
     var body: some View {
@@ -377,212 +352,42 @@ struct ServiceRequestDetailView: View {
                     Button("Try again") { Task { await load() } }
                         .buttonStyle(.borderedProminent)
                 }
-            } else if let item {
-                List {
-                    Section("Request") {
-                        LabeledContent("Title", value: item.title)
-                        if let description = item.description, !description.isEmpty {
-                            Text(description)
-                        }
-                        LabeledContent("Category", value: item.category)
-                        LabeledContent("Priority", value: item.priority)
-                        LabeledContent("Status", value: item.statusLabel)
-                        if item.statusLabel != item.status.replacingOccurrences(of: "_", with: " ") {
-                            LabeledContent("System status", value: item.status.replacingOccurrences(of: "_", with: " "))
-                        }
-                        if let name = item.assignedEmployeeName {
-                            LabeledContent("Assigned", value: name)
-                        }
-                        if let raised = item.raisedByName {
-                            LabeledContent("Raised by", value: raised)
-                        }
-                    }
-
-                    Section("Repair & payment") {
-                        if let amount = item.expectedAmount {
-                            LabeledContent("Expected amount", value: NriFormat.decimal(amount))
-                        } else {
-                            Text("Expected repair amount not set yet.")
-                                .foregroundStyle(NriTheme.slate)
-                        }
-                        if let payerType = item.payerType {
-                            LabeledContent(
-                                "Who pays",
-                                value: payerType == "COMPANY"
-                                    ? "Company (no payment required)"
-                                    : payerType.capitalized
-                            )
-                        }
-                        if let payerName = item.payerName {
-                            LabeledContent("Payer", value: payerName)
-                        }
-                        if let paymentStatus = item.paymentStatus {
-                            LabeledContent(
-                                "Payment",
-                                value: paymentStatus.replacingOccurrences(of: "_", with: " ")
-                            )
-                        }
-                        LabeledContent(
-                            "Work",
-                            value: item.workCompleted == true ? "Completed" : "Pending"
-                        )
-                        if let notes = item.payerNotes, !notes.isEmpty {
-                            Text(notes).font(.footnote).foregroundStyle(NriTheme.slate)
-                        }
-                        if let invoice = linkedInvoice {
-                            NavigationLink {
-                                InvoiceDetailView(invoice: invoice) {
-                                    await load()
-                                    await onChanged?()
-                                }
-                            } label: {
-                                LabeledContent(
-                                    "Invoice",
-                                    value: invoice.invoiceNumber ?? "View invoice"
-                                )
-                            }
-                        } else if item.linkedInvoiceId != nil {
-                            Text("Invoice linked — pull to refresh if it does not appear.")
-                                .font(.footnote)
-                                .foregroundStyle(NriTheme.slate)
-                        }
-                    }
-
-                    if item.paymentStatus == "PENDING" || item.status == "AWAITING_PAYMENT" {
-                        CompanyPaymentInstructionsSection()
-                    }
-
-                    if canStaffAct {
-                        Section("Staff actions") {
-                            Button("Assign employee") { showAssign = true }
-                            if canSetEstimate {
-                                Button("Set expected repair amount") { showEstimate = true }
-                            }
-                            if canSetPayer {
-                                Button("Confirm who pays") { showPayer = true }
-                            }
-                            if canMarkWorkCompleted {
-                                Button("Mark work completed") { showWorkCompleted = true }
-                            }
-                            Button("Update status") { showUpdateStatus = true }
-                        } footer: {
-                            Text(
-                                "Flow: estimate → confirm payer (invoice emails owner/tenant, or company = no payment) → mark work done → mark invoice paid → close only when work and payment are both settled."
-                            )
-                        }
-                    }
-
-                    Section {
-                        if attachments.isEmpty {
-                            Text("No photos attached yet.")
-                                .foregroundStyle(NriTheme.slate)
-                        } else {
-                            ForEach(attachments) { attachment in
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(attachment.originalFilename ?? "Attachment")
-                                        .font(.subheadline.weight(.semibold))
-                                    if let name = attachment.uploadedByName {
-                                        Text("By \(name)")
-                                            .font(.caption)
-                                            .foregroundStyle(NriTheme.slate)
-                                    }
-                                }
-                            }
-                        }
-                        if canAttach {
-                            PhotosPicker(selection: $photoItem, matching: .images) {
-                                Label(isUploading ? "Uploading…" : "Add photo", systemImage: "photo.badge.plus")
-                            }
-                            .disabled(isUploading)
-                            .onChange(of: photoItem) { _, newItem in
-                                guard let newItem else { return }
-                                Task { await uploadAttachment(newItem) }
-                            }
-                        }
-                    } header: {
-                        Text("Attachments")
-                    }
-
-                    if !history.isEmpty {
-                        Section("Status history") {
-                            ForEach(history) { event in
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text("\(event.oldStatus ?? "—") → \(event.newStatus)")
-                                        .font(.subheadline.weight(.semibold))
-                                    if let comments = event.comments, !comments.isEmpty {
-                                        Text(comments).font(.footnote).foregroundStyle(NriTheme.slate)
-                                    }
-                                    HStack {
-                                        if let name = event.changedByName {
-                                            Text(name)
-                                        }
-                                        Spacer()
-                                        if let timestamp = event.timestamp {
-                                            Text(timestamp).font(.caption2)
-                                        }
-                                    }
-                                    .font(.caption)
-                                    .foregroundStyle(NriTheme.slate)
-                                }
-                            }
-                        }
-                    }
-
-                    if canCancel {
-                        Section {
-                            Button("Cancel request", role: .destructive) {
-                                showCancelConfirm = true
-                            }
-                            .disabled(isCancelling)
-                        } footer: {
-                            Text(
-                                session.user?.role == .ADMIN
-                                    ? "Admins can cancel open or in-progress requests."
-                                    : "You can cancel while the request is still open or in progress."
-                            )
-                        }
-                    }
-
-                    if let errorMessage {
-                        Section {
-                            Text(errorMessage).foregroundStyle(NriTheme.terracotta)
-                        }
-                    }
-                }
+            } else if let detail = item {
+                detailList(detail)
             }
         }
         .navigationTitle("Request")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showAssign) {
             AssignEmployeeSheet(title: "Assign request") { employeeId in
-                item = try await appState.api.assignServiceRequest(id: requestId, employeeUserId: employeeId)
-                history = try await appState.api.serviceRequestHistory(id: requestId)
+                self.item = try await appState.api.assignServiceRequest(id: requestId, employeeUserId: employeeId)
+                self.history = try await appState.api.serviceRequestHistory(id: requestId)
                 await onChanged?()
             }
         }
         .sheet(isPresented: $showUpdateStatus) {
             UpdateServiceRequestStatusSheet(current: item?.status ?? "OPEN") { status, comments in
-                item = try await appState.api.updateServiceRequestStatus(
+                self.item = try await appState.api.updateServiceRequestStatus(
                     id: requestId,
                     UpdateServiceRequestStatusBody(status: status, comments: comments)
                 )
-                history = try await appState.api.serviceRequestHistory(id: requestId)
+                self.history = try await appState.api.serviceRequestHistory(id: requestId)
                 await onChanged?()
             }
         }
         .sheet(isPresented: $showEstimate) {
             SetRepairEstimateSheet { amount, comments in
-                item = try await appState.api.setServiceRequestEstimate(
+                self.item = try await appState.api.setServiceRequestEstimate(
                     id: requestId,
                     SetRepairEstimateBody(expectedAmount: amount, comments: comments)
                 )
-                history = try await appState.api.serviceRequestHistory(id: requestId)
+                self.history = try await appState.api.serviceRequestHistory(id: requestId)
                 await onChanged?()
             }
         }
         .sheet(isPresented: $showPayer) {
             SetServiceRequestPayerSheet { payerType, comments, workCompleted in
-                item = try await appState.api.setServiceRequestPayer(
+                self.item = try await appState.api.setServiceRequestPayer(
                     id: requestId,
                     SetServiceRequestPayerBody(
                         payerType: payerType,
@@ -590,18 +395,18 @@ struct ServiceRequestDetailView: View {
                         workCompleted: workCompleted
                     )
                 )
-                history = try await appState.api.serviceRequestHistory(id: requestId)
+                self.history = try await appState.api.serviceRequestHistory(id: requestId)
                 await refreshLinkedInvoice()
                 await onChanged?()
             }
         }
         .sheet(isPresented: $showWorkCompleted) {
             MarkWorkCompletedSheet { comments in
-                item = try await appState.api.markServiceRequestWorkCompleted(
+                self.item = try await appState.api.markServiceRequestWorkCompleted(
                     id: requestId,
                     comments: comments
                 )
-                history = try await appState.api.serviceRequestHistory(id: requestId)
+                self.history = try await appState.api.serviceRequestHistory(id: requestId)
                 await onChanged?()
             }
         }
@@ -616,6 +421,232 @@ struct ServiceRequestDetailView: View {
                 Task { await cancel() }
             }
             Button("Keep request", role: .cancel) {}
+        }
+    }
+
+    @ViewBuilder
+    private func detailList(_ detail: ServiceRequestItem) -> some View {
+        List {
+            requestInfoSection(detail)
+            repairPaymentSection(detail)
+            if detail.paymentStatus == "PENDING" || detail.status == "AWAITING_PAYMENT" {
+                CompanyPaymentInstructionsSection()
+            }
+            if canStaffAct {
+                staffActionsSection(
+                    canEstimate: canSetEstimate(for: detail),
+                    canPayer: canSetPayer(for: detail),
+                    canCompleteWork: canMarkWorkCompleted(for: detail)
+                )
+            }
+            attachmentsSection
+            if !history.isEmpty {
+                historySection
+            }
+            if canCancel(detail) {
+                Section {
+                    Button("Cancel request", role: .destructive) {
+                        showCancelConfirm = true
+                    }
+                    .disabled(isCancelling)
+                } footer: {
+                    Text(
+                        role == .ADMIN
+                            ? "Admins can cancel open or in-progress requests."
+                            : "You can cancel while the request is still open or in progress."
+                    )
+                }
+            }
+            if let errorMessage {
+                Section {
+                    Text(errorMessage).foregroundStyle(NriTheme.terracotta)
+                }
+            }
+        }
+    }
+
+    private func canCancel(_ detail: ServiceRequestItem) -> Bool {
+        detail.canCancel && (role == .OWNER || role == .TENANT || role == .ADMIN)
+    }
+
+    private func canSetEstimate(for detail: ServiceRequestItem) -> Bool {
+        ["OPEN", "ASSIGNED", "IN_PROGRESS", "WAITING_FOR_PARTS"].contains(detail.status)
+            || detail.expectedAmount == nil
+    }
+
+    private func canSetPayer(for detail: ServiceRequestItem) -> Bool {
+        detail.expectedAmount != nil
+            && !["CLOSED", "CANCELLED", "REJECTED"].contains(detail.status)
+    }
+
+    private func canMarkWorkCompleted(for detail: ServiceRequestItem) -> Bool {
+        detail.workCompleted != true
+            && !["CLOSED", "CANCELLED", "REJECTED"].contains(detail.status)
+            && detail.payerType != nil
+    }
+
+    @ViewBuilder
+    private func requestInfoSection(_ detail: ServiceRequestItem) -> some View {
+        Section("Request") {
+            LabeledContent("Title", value: detail.title)
+            if let text = detail.description, !text.isEmpty {
+                Text(text)
+            }
+            LabeledContent("Category", value: detail.category)
+            LabeledContent("Priority", value: detail.priority)
+            LabeledContent("Status", value: detail.statusLabel)
+            if detail.statusLabel != detail.status.replacingOccurrences(of: "_", with: " ") {
+                LabeledContent(
+                    "System status",
+                    value: detail.status.replacingOccurrences(of: "_", with: " ")
+                )
+            }
+            if let name = detail.assignedEmployeeName {
+                LabeledContent("Assigned", value: name)
+            }
+            if let raised = detail.raisedByName {
+                LabeledContent("Raised by", value: raised)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func repairPaymentSection(_ detail: ServiceRequestItem) -> some View {
+        Section("Repair & payment") {
+            if let amount = detail.expectedAmount {
+                LabeledContent("Expected amount", value: NriFormat.decimal(amount))
+            } else {
+                Text("Expected repair amount not set yet.")
+                    .foregroundStyle(NriTheme.slate)
+            }
+            if let payerType = detail.payerType {
+                LabeledContent(
+                    "Who pays",
+                    value: payerType == "COMPANY"
+                        ? "Company (no payment required)"
+                        : payerType.capitalized
+                )
+            }
+            if let payerName = detail.payerName {
+                LabeledContent("Payer", value: payerName)
+            }
+            if let paymentStatus = detail.paymentStatus {
+                LabeledContent(
+                    "Payment",
+                    value: paymentStatus.replacingOccurrences(of: "_", with: " ")
+                )
+            }
+            LabeledContent(
+                "Work",
+                value: detail.workCompleted == true ? "Completed" : "Pending"
+            )
+            if let notes = detail.payerNotes, !notes.isEmpty {
+                Text(notes).font(.footnote).foregroundStyle(NriTheme.slate)
+            }
+            if let invoice = linkedInvoice {
+                NavigationLink {
+                    InvoiceDetailView(invoice: invoice) {
+                        await load()
+                        await onChanged?()
+                    }
+                } label: {
+                    LabeledContent(
+                        "Invoice",
+                        value: invoice.invoiceNumber ?? "View invoice"
+                    )
+                }
+            } else if detail.linkedInvoiceId != nil {
+                Text("Invoice linked — pull to refresh if it does not appear.")
+                    .font(.footnote)
+                    .foregroundStyle(NriTheme.slate)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func staffActionsSection(
+        canEstimate: Bool,
+        canPayer: Bool,
+        canCompleteWork: Bool
+    ) -> some View {
+        Section {
+            Button("Assign employee") { showAssign = true }
+            if canEstimate {
+                Button("Set expected repair amount") { showEstimate = true }
+            }
+            if canPayer {
+                Button("Confirm who pays") { showPayer = true }
+            }
+            if canCompleteWork {
+                Button("Mark work completed") { showWorkCompleted = true }
+            }
+            Button("Update status") { showUpdateStatus = true }
+        } header: {
+            Text("Staff actions")
+        } footer: {
+            Text(
+                "Flow: estimate → confirm payer (invoice emails owner/tenant, or company = no payment) → mark work done → mark invoice paid → close only when work and payment are both settled."
+            )
+        }
+    }
+
+    @ViewBuilder
+    private var attachmentsSection: some View {
+        Section {
+            if attachments.isEmpty {
+                Text("No photos attached yet.")
+                    .foregroundStyle(NriTheme.slate)
+            } else {
+                ForEach(attachments) { attachment in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(attachment.originalFilename ?? "Attachment")
+                            .font(.subheadline.weight(.semibold))
+                        if let name = attachment.uploadedByName {
+                            Text("By \(name)")
+                                .font(.caption)
+                                .foregroundStyle(NriTheme.slate)
+                        }
+                    }
+                }
+            }
+            if canAttach {
+                PhotosPicker(selection: $photoItem, matching: .images) {
+                    Label(isUploading ? "Uploading…" : "Add photo", systemImage: "photo.badge.plus")
+                }
+                .disabled(isUploading)
+                .onChange(of: photoItem) { _, newItem in
+                    guard let newItem else { return }
+                    Task { await uploadAttachment(newItem) }
+                }
+            }
+        } header: {
+            Text("Attachments")
+        }
+    }
+
+    @ViewBuilder
+    private var historySection: some View {
+        Section("Status history") {
+            ForEach(history) { event in
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("\(event.oldStatus ?? "—") → \(event.newStatus)")
+                        .font(.subheadline.weight(.semibold))
+                    if let comments = event.comments, !comments.isEmpty {
+                        Text(comments).font(.footnote).foregroundStyle(NriTheme.slate)
+                    }
+                    HStack {
+                        if let name = event.changedByName {
+                            Text(name)
+                        }
+                        Spacer()
+                        if let timestamp = event.timestamp {
+                            Text(timestamp).font(.caption2)
+                        }
+                    }
+                    .font(.caption)
+                    .foregroundStyle(NriTheme.slate)
+                }
+            }
         }
     }
 
