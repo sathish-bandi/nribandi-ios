@@ -13,11 +13,19 @@ struct PropertiesView: View {
         session.user?.role == .ADMIN
     }
 
+    private var isTenant: Bool {
+        session.user?.role == .TENANT
+    }
+
+    private var navigationTitle: String {
+        isTenant ? "My home" : "Properties"
+    }
+
     var body: some View {
         NavigationStack {
             Group {
                 if isLoading && items.isEmpty {
-                    ProgressView("Loading properties…")
+                    ProgressView(isTenant ? "Loading your home…" : "Loading properties…")
                 } else if let errorMessage, items.isEmpty {
                     ContentUnavailableView {
                         Label("Could not load", systemImage: "building.2")
@@ -29,9 +37,9 @@ struct PropertiesView: View {
                     }
                 } else if items.isEmpty {
                     ContentUnavailableView {
-                        Label("No properties", systemImage: "building.2")
+                        Label(isTenant ? "No home linked" : "No properties", systemImage: "building.2")
                     } description: {
-                        Text(canManageProperties ? "Tap + to add a property." : "Nothing visible for this account yet.")
+                        Text(emptyDescription)
                     } actions: {
                         if canManageProperties {
                             Button("Add property") { showCreate = true }
@@ -48,10 +56,18 @@ struct PropertiesView: View {
                                 } label: {
                                     VStack(alignment: .leading, spacing: 6) {
                                         Text(property.name).font(.headline).foregroundStyle(NriTheme.ink)
+                                        Text(property.address)
+                                            .font(.subheadline)
+                                            .foregroundStyle(NriTheme.ink.opacity(0.85))
                                         Text(property.locationLine).font(.subheadline).foregroundStyle(NriTheme.slate)
                                         HStack {
                                             StatusChip(text: property.propertyType)
                                             StatusChip(text: property.propertyPurpose)
+                                        }
+                                        if isTenant {
+                                            Text("Tap to see your unit and rental details")
+                                                .font(.caption)
+                                                .foregroundStyle(NriTheme.slate)
                                         }
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -75,7 +91,7 @@ struct PropertiesView: View {
                     .refreshable { await load() }
                 }
             }
-            .navigationTitle("Properties")
+            .navigationTitle(navigationTitle)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     HStack(spacing: 12) {
@@ -93,6 +109,16 @@ struct PropertiesView: View {
             }
             .task { await load() }
         }
+    }
+
+    private var emptyDescription: String {
+        if canManageProperties {
+            return "Tap + to add a property."
+        }
+        if isTenant {
+            return "Once your owner assigns a tenancy, your house address appears here."
+        }
+        return "Nothing visible for this account yet."
     }
 
     private func load() async {

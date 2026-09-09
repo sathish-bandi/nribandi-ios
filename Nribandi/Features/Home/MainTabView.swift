@@ -10,7 +10,12 @@ struct MainTabView: View {
                     .tabItem { Label("Dashboard", systemImage: "chart.bar.fill") }
             }
             PropertiesView()
-                .tabItem { Label("Properties", systemImage: "building.2.fill") }
+                .tabItem {
+                    Label(
+                        session.user?.role == .TENANT ? "My home" : "Properties",
+                        systemImage: "building.2.fill"
+                    )
+                }
             if showsPeopleTab {
                 PeopleView()
                     .tabItem { Label(peopleTabTitle, systemImage: "person.2.fill") }
