@@ -335,6 +335,16 @@ final class APIClient {
         )
     }
 
+    func user(id: UUID) async throws -> ManagedUserItem {
+        try await send(
+            method: "GET",
+            path: "/api/v1/users/\(id.uuidString.lowercased())",
+            body: Optional<String>.none,
+            authorized: true,
+            as: ManagedUserItem.self
+        )
+    }
+
     // MARK: - Blocks / Floors / Units
 
     func blocks(propertyId: UUID) async throws -> [BlockItem] {
@@ -407,6 +417,16 @@ final class APIClient {
         )
     }
 
+    func unit(id: UUID) async throws -> UnitItem {
+        try await send(
+            method: "GET",
+            path: "/api/v1/units/\(id.uuidString.lowercased())",
+            body: Optional<String>.none,
+            authorized: true,
+            as: UnitItem.self
+        )
+    }
+
     // MARK: - Tenancies
 
     func tenancies(unitId: UUID) async throws -> [TenancyItem] {
@@ -433,6 +453,41 @@ final class APIClient {
         try await send(
             method: "POST",
             path: "/api/v1/tenancies/\(id.uuidString.lowercased())/end",
+            body: body,
+            authorized: true,
+            as: TenancyItem.self
+        )
+    }
+
+    func tenancy(id: UUID) async throws -> TenancyItem {
+        try await send(
+            method: "GET",
+            path: "/api/v1/tenancies/\(id.uuidString.lowercased())",
+            body: Optional<String>.none,
+            authorized: true,
+            as: TenancyItem.self
+        )
+    }
+
+    func uploadTenancyAgreement(
+        id: UUID,
+        fileData: Data,
+        fileName: String,
+        mimeType: String
+    ) async throws -> TenancyItem {
+        try await uploadMultipart(
+            path: "/api/v1/tenancies/\(id.uuidString.lowercased())/agreement",
+            fileData: fileData,
+            fileName: fileName,
+            mimeType: mimeType,
+            as: TenancyItem.self
+        )
+    }
+
+    func updateTenancyAgreementMeta(id: UUID, _ body: UpdateTenancyAgreementMetaBody) async throws -> TenancyItem {
+        try await send(
+            method: "PATCH",
+            path: "/api/v1/tenancies/\(id.uuidString.lowercased())/agreement-meta",
             body: body,
             authorized: true,
             as: TenancyItem.self
@@ -518,6 +573,45 @@ final class APIClient {
         )
     }
 
+    func unitEnquiries(unitId: UUID) async throws -> [EnquiryItem] {
+        try await send(
+            method: "GET",
+            path: "/api/v1/units/\(unitId.uuidString.lowercased())/enquiries",
+            body: Optional<String>.none,
+            authorized: true,
+            as: [EnquiryItem].self
+        )
+    }
+
+    func createUnitEnquiry(unitId: UUID, _ body: CreateUnitEnquiryBody) async throws -> EnquiryItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/units/\(unitId.uuidString.lowercased())/enquiries",
+            body: body,
+            authorized: true,
+            as: EnquiryItem.self
+        )
+    }
+
+    func updateEnquiry(id: UUID, _ body: UpdateEnquiryBody) async throws -> EnquiryItem {
+        try await send(
+            method: "PUT",
+            path: "/api/v1/enquiries/\(id.uuidString.lowercased())",
+            body: body,
+            authorized: true,
+            as: EnquiryItem.self
+        )
+    }
+
+    func deleteEnquiry(id: UUID) async throws {
+        _ = try await sendMessage(
+            method: "DELETE",
+            path: "/api/v1/enquiries/\(id.uuidString.lowercased())",
+            body: Optional<String>.none,
+            authorized: true
+        )
+    }
+
     // MARK: - Inspections
 
     func createInspection(_ body: CreateInspectionBody) async throws -> InspectionItem {
@@ -537,6 +631,20 @@ final class APIClient {
             body: UpdateInspectionStatusBody(status: status),
             authorized: true,
             as: InspectionItem.self
+        )
+    }
+
+    func unitInspections(unitId: UUID, limit: Int? = nil) async throws -> [InspectionDetailItem] {
+        var path = "/api/v1/inspections/by-unit/\(unitId.uuidString.lowercased())"
+        if let limit {
+            path += "?limit=\(limit)"
+        }
+        return try await send(
+            method: "GET",
+            path: path,
+            body: Optional<String>.none,
+            authorized: true,
+            as: [InspectionDetailItem].self
         )
     }
 

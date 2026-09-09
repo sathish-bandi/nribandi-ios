@@ -184,6 +184,20 @@ struct PropertyDetailView: View {
                                         StatusChip(text: unit.occupancyStatus)
                                         StatusChip(text: unit.toLetBoardStatus)
                                     }
+                                    if let tenant = unit.currentTenancy {
+                                        Text("Tenant: \(tenant.tenantName ?? "—") · \(tenant.durationLabel)")
+                                            .font(.footnote)
+                                            .foregroundStyle(NriTheme.slate)
+                                        if tenant.agreementExpiringSoon {
+                                            Text("Agreement renews soon")
+                                                .font(.caption.weight(.semibold))
+                                                .foregroundStyle(NriTheme.terracotta)
+                                        }
+                                    } else if unit.isVacant {
+                                        Text("Vacant — to-let enquiries on unit detail")
+                                            .font(.footnote)
+                                            .foregroundStyle(NriTheme.slate)
+                                    }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.vertical, 4)

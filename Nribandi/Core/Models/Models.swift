@@ -202,6 +202,7 @@ struct UnitItem: Decodable, Identifiable, Hashable {
     let unitType: String
     let occupancyStatus: String
     let toLetBoardStatus: String
+    let currentTenancy: CurrentTenancySummary?
     let createdAt: String?
     let updatedAt: String?
 
@@ -212,6 +213,49 @@ struct UnitItem: Decodable, Identifiable, Hashable {
         }
         return "Fl \(floorLabel) · \(unitNumber)"
     }
+
+    var isTenanted: Bool { occupancyStatus.uppercased() == "TENANTED" }
+    var isVacant: Bool { occupancyStatus.uppercased() == "VACANT" }
+}
+
+struct CurrentTenancySummary: Decodable, Hashable {
+    let tenancyId: UUID
+    let tenantUserId: UUID
+    let tenantName: String?
+    let tenantEmail: String?
+    let tenantPhone: String?
+    let moveInDate: String?
+    let agreementStartDate: String?
+    let agreementEndDate: String?
+    let durationDays: Int64?
+    let hasRentalAgreement: Bool?
+    let agreementDownloadUrl: String?
+    let agreementFilename: String?
+
+    var durationLabel: String {
+        guard let durationDays else { return "—" }
+        if durationDays < 30 { return "\(durationDays) days" }
+        let months = durationDays / 30
+        let rem = durationDays % 30
+        if rem == 0 { return "\(months) mo" }
+        return "\(months) mo \(rem) d"
+    }
+
+    var agreementExpiringSoon: Bool {
+        guard let agreementEndDate,
+              let end = Self.dayFormatter.date(from: String(agreementEndDate.prefix(10))) else { return false }
+        let days = Calendar.current.dateComponents([.day], from: Date(), to: end).day ?? 999
+        return days >= 0 && days <= 30
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }
 
 struct ServiceRequestItem: Decodable, Identifiable, Hashable {
@@ -254,9 +298,18 @@ struct TenancyItem: Decodable, Identifiable, Hashable {
     let unitType: String?
     let tenantUserId: UUID
     let tenantName: String?
+    let tenantEmail: String?
+    let tenantPhone: String?
     let moveInDate: String?
     let moveOutDate: String?
+    let durationDays: Int64?
     let active: Bool
+    let agreementStartDate: String?
+    let agreementEndDate: String?
+    let hasRentalAgreement: Bool?
+    let agreementFilename: String?
+    let agreementDownloadUrl: String?
+    let agreementUploadedAt: String?
     let createdAt: String?
     let updatedAt: String?
 
@@ -268,6 +321,32 @@ struct TenancyItem: Decodable, Identifiable, Hashable {
         }
         return "\(property) · \(unit)"
     }
+
+    var durationLabel: String {
+        guard let durationDays else { return "—" }
+        if durationDays < 30 { return "\(durationDays) days" }
+        let months = durationDays / 30
+        let rem = durationDays % 30
+        if rem == 0 { return "\(months) mo" }
+        return "\(months) mo \(rem) d"
+    }
+
+    var agreementExpiringSoon: Bool {
+        guard active,
+              let agreementEndDate,
+              let end = Self.dayFormatter.date(from: String(agreementEndDate.prefix(10))) else { return false }
+        let days = Calendar.current.dateComponents([.day], from: Date(), to: end).day ?? 999
+        return days >= 0 && days <= 30
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
 }
 
 struct ServiceRequestAttachmentItem: Decodable, Identifiable, Hashable {
@@ -295,6 +374,10 @@ struct ServiceRequestHistoryItem: Decodable, Identifiable, Hashable {
 
 struct EnquiryItem: Decodable, Identifiable, Hashable {
     let id: UUID
+    let propertyId: UUID?
+    let propertyName: String?
+    let unitId: UUID?
+    let unitNumber: String?
     let customerName: String
     let mobileNumber: String
     let whatsappNumber: String?
@@ -324,6 +407,38 @@ struct InspectionItem: Decodable, Identifiable, Hashable {
     let status: String
     let createdAt: String?
     let updatedAt: String?
+}
+
+struct InspectionDetailItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let propertyId: UUID
+    let propertyName: String?
+    let unitId: UUID?
+    let unitNumber: String?
+    let inspectorEmployeeId: UUID?
+    let inspectorEmployeeName: String?
+    let inspectionType: String
+    let inspectionDate: String?
+    let notes: String?
+    let status: String
+    let attachments: [InspectionAttachmentItem]?
+    let createdAt: String?
+    let updatedAt: String?
+}
+
+struct InspectionAttachmentItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let inspectionId: UUID
+    let originalFilename: String?
+    let contentType: String?
+    let fileSize: Int64?
+    let uploadedByUserId: UUID?
+    let uploadedByName: String?
+    let downloadUrl: String?
+    let createdAt: String?
+
+    var isImage: Bool { (contentType ?? "").hasPrefix("image/") }
+    var isVideo: Bool { (contentType ?? "").hasPrefix("video/") }
 }
 
 struct TenantVerificationItem: Decodable, Identifiable, Hashable {
@@ -560,6 +675,32 @@ struct UpdateServiceRequestStatusBody: Encodable {
 
 struct UpdateEnquiryStatusBody: Encodable {
     let status: String
+}
+
+struct CreateUnitEnquiryBody: Encodable {
+    let customerName: String
+    let mobileNumber: String?
+    let whatsappNumber: String?
+    let requestedLocality: String?
+    let requestedUnitType: String?
+    let budget: Decimal?
+    let message: String?
+}
+
+struct UpdateEnquiryBody: Encodable {
+    var customerName: String?
+    var mobileNumber: String?
+    var whatsappNumber: String?
+    var requestedLocality: String?
+    var requestedUnitType: String?
+    var budget: Decimal?
+    var message: String?
+    var status: String?
+}
+
+struct UpdateTenancyAgreementMetaBody: Encodable {
+    let agreementStartDate: String
+    let agreementEndDate: String
 }
 
 struct CreateInspectionBody: Encodable {

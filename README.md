@@ -93,7 +93,21 @@ In **Debug**, pick **TEST** or **PROD** in the app. **Release / App Store** alwa
 
 - JWT login / logout (refresh on 401)
 - Dashboard (ADMIN / EMPLOYEE)
-- Properties + units
+- Properties + units with **tenant / vacant** status on unit lists
+- **Unit detail:** current tenant (tap for People KYC), tenancy duration, rental agreement PDF, recent inspections with media, to-let enquiries on vacant units (staff CRUD, max 10)
 - Service requests
-- Enquiries
+- Global enquiries
 - Profile (+ environment switcher in Debug only)
+
+## Demo (Local seed)
+
+After seeding the backend (`./scripts/local-seed.sh` in the API repo):
+
+| Scenario | Where |
+|---|---|
+| Tenanted unit + agreement PDF + inspections | Properties → unit with Priya / Rahul |
+| Pre-move-in inspection hidden from tenant | Login as `priya.menon@nribandi.local` → her unit inspections |
+| Vacant to-let enquiries | Vacant unit `101` on seeded apartment |
+| Agreement renewing soon | Priya’s tenancy (ends ~12 days out) |
+
+Password for all seed accounts: `Nribandi@123`
