@@ -111,7 +111,12 @@ struct ServiceRequestsView: View {
         errorMessage = nil
         defer { isLoading = false }
         do {
-            items = try await appState.api.serviceRequests().content
+            // Active tickets uncapped; closed history limited to the newest 10.
+            async let activePage = appState.api.serviceRequests(size: 100, excludeStatus: "CLOSED")
+            async let closedPage = appState.api.serviceRequests(size: 10, status: "CLOSED")
+            let active = try await activePage.content
+            let closed = try await closedPage.content
+            items = active + closed
         } catch {
             errorMessage = error.localizedDescription
         }

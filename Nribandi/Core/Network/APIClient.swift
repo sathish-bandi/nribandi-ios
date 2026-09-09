@@ -132,10 +132,18 @@ final class APIClient {
         )
     }
 
-    func serviceRequests(page: Int = 0, size: Int = 50, status: String? = nil) async throws -> PageResponse<ServiceRequestItem> {
+    func serviceRequests(
+        page: Int = 0,
+        size: Int = 50,
+        status: String? = nil,
+        excludeStatus: String? = nil
+    ) async throws -> PageResponse<ServiceRequestItem> {
         var path = "/api/v1/service-requests?page=\(page)&size=\(size)"
         if let status, !status.isEmpty {
             path += "&status=\(status)"
+        }
+        if let excludeStatus, !excludeStatus.isEmpty {
+            path += "&excludeStatus=\(excludeStatus)"
         }
         return try await send(
             method: "GET",

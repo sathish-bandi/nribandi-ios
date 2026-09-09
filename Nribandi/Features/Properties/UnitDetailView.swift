@@ -150,7 +150,7 @@ struct UnitDetailView: View {
 
     @ViewBuilder
     private var occupancySection: some View {
-        Section("Unit") {
+        Section(isTenantViewer ? "My unit" : "Unit") {
             LabeledContent("Property", value: propertyName)
             LabeledContent("Unit", value: unit.unitNumber)
             if let block = unit.blockNumber {
@@ -160,13 +160,30 @@ struct UnitDetailView: View {
                 LabeledContent("Floor", value: "\(floor)")
             }
             StatusChip(text: UnitTypeDisplay.title(for: unit.unitType), emphasized: true)
-            HStack {
-                StatusChip(text: unit.occupancyStatus)
-                StatusChip(text: unit.toLetBoardStatus)
+            if !isTenantViewer {
+                HStack {
+                    StatusChip(text: unit.occupancyStatus)
+                    StatusChip(text: unit.toLetBoardStatus)
+                }
+                Text(unit.isTenanted ? "Tenanted — rental agreement in place" : "Vacant / available for to-let")
+                    .font(.footnote)
+                    .foregroundStyle(NriTheme.slate)
             }
-            Text(unit.isTenanted ? "Tenanted — rental agreement in place" : "Vacant / available for to-let")
-                .font(.footnote)
-                .foregroundStyle(NriTheme.slate)
+        }
+    }
+
+    @ViewBuilder
+    private var tenantOwnTenancySection: some View {
+        Section("Your stay") {
+            if isLoading {
+                ProgressView()
+            } else if let tenancy = activeTenancy, tenancy.active {
+                LabeledContent("Move-in", value: tenancy.moveInDate ?? "—")
+                LabeledContent("Duration", value: tenancy.durationLabel)
+            } else {
+                Text("No active tenancy found for this unit.")
+                    .foregroundStyle(NriTheme.slate)
+            }
         }
     }
 
