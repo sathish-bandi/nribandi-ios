@@ -129,6 +129,12 @@ struct InvoiceDetailView: View {
                 LabeledContent("Number", value: invoice.invoiceNumber ?? "—")
                 LabeledContent("Date", value: invoice.invoiceDate ?? "—")
                 LabeledContent("Status", value: invoice.status)
+                if let billedTo = invoice.billedToName {
+                    LabeledContent(
+                        "Billed to",
+                        value: invoice.billedToRole.map { "\(billedTo) (\($0))" } ?? billedTo
+                    )
+                }
                 if let tax = invoice.tax { LabeledContent("Tax", value: NriFormat.decimal(tax)) }
                 if let discount = invoice.discount { LabeledContent("Discount", value: NriFormat.decimal(discount)) }
                 if let total = invoice.totalAmount { LabeledContent("Total", value: NriFormat.decimal(total)) }

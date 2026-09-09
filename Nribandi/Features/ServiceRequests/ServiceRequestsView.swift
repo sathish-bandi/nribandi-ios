@@ -61,8 +61,10 @@ struct ServiceRequestsView: View {
                                 HStack {
                                     StatusChip(text: item.category)
                                     StatusChip(text: item.priority)
-                                    StatusChip(text: item.status)
                                 }
+                                Text(item.statusLabel)
+                                    .font(.caption.weight(.semibold))
+                                    .foregroundStyle(NriTheme.terracotta)
                                 if let name = item.assignedEmployeeName {
                                     Text("Assigned: \(name)")
                                         .font(.caption)
@@ -314,6 +316,7 @@ struct ServiceRequestDetailView: View {
     @State private var item: ServiceRequestItem?
     @State private var history: [ServiceRequestHistoryItem] = []
     @State private var attachments: [ServiceRequestAttachmentItem] = []
+    @State private var linkedInvoice: InvoiceItem?
     @State private var errorMessage: String?
     @State private var isLoading = true
     @State private var isCancelling = false
@@ -321,6 +324,9 @@ struct ServiceRequestDetailView: View {
     @State private var showCancelConfirm = false
     @State private var showAssign = false
     @State private var showUpdateStatus = false
+    @State private var showEstimate = false
+    @State private var showPayer = false
+    @State private var showWorkCompleted = false
     @State private var photoItem: PhotosPickerItem?
 
     private var canCancel: Bool {
@@ -337,6 +343,25 @@ struct ServiceRequestDetailView: View {
     private var canAttach: Bool {
         let role = session.user?.role
         return role == .ADMIN || role == .EMPLOYEE || role == .OWNER
+    }
+
+    private var canSetEstimate: Bool {
+        guard canStaffAct, let item else { return false }
+        return ["OPEN", "ASSIGNED", "IN_PROGRESS", "WAITING_FOR_PARTS"].contains(item.status)
+            || item.expectedAmount == nil
+    }
+
+    private var canSetPayer: Bool {
+        guard canStaffAct, let item else { return false }
+        return item.expectedAmount != nil
+            && !["CLOSED", "CANCELLED", "REJECTED"].contains(item.status)
+    }
+
+    private var canMarkWorkCompleted: Bool {
+        guard canStaffAct, let item else { return false }
+        return item.workCompleted != true
+            && !["CLOSED", "CANCELLED", "REJECTED"].contains(item.status)
+            && item.payerType != nil
     }
 
     var body: some View {
@@ -361,7 +386,10 @@ struct ServiceRequestDetailView: View {
                         }
                         LabeledContent("Category", value: item.category)
                         LabeledContent("Priority", value: item.priority)
-                        LabeledContent("Status", value: item.status)
+                        LabeledContent("Status", value: item.statusLabel)
+                        if item.statusLabel != item.status.replacingOccurrences(of: "_", with: " ") {
+                            LabeledContent("System status", value: item.status.replacingOccurrences(of: "_", with: " "))
+                        }
                         if let name = item.assignedEmployeeName {
                             LabeledContent("Assigned", value: name)
                         }
@@ -370,10 +398,73 @@ struct ServiceRequestDetailView: View {
                         }
                     }
 
+                    Section("Repair & payment") {
+                        if let amount = item.expectedAmount {
+                            LabeledContent("Expected amount", value: NriFormat.decimal(amount))
+                        } else {
+                            Text("Expected repair amount not set yet.")
+                                .foregroundStyle(NriTheme.slate)
+                        }
+                        if let payerType = item.payerType {
+                            LabeledContent(
+                                "Who pays",
+                                value: payerType == "COMPANY"
+                                    ? "Company (no payment required)"
+                                    : payerType.capitalized
+                            )
+                        }
+                        if let payerName = item.payerName {
+                            LabeledContent("Payer", value: payerName)
+                        }
+                        if let paymentStatus = item.paymentStatus {
+                            LabeledContent(
+                                "Payment",
+                                value: paymentStatus.replacingOccurrences(of: "_", with: " ")
+                            )
+                        }
+                        LabeledContent(
+                            "Work",
+                            value: item.workCompleted == true ? "Completed" : "Pending"
+                        )
+                        if let notes = item.payerNotes, !notes.isEmpty {
+                            Text(notes).font(.footnote).foregroundStyle(NriTheme.slate)
+                        }
+                        if let invoice = linkedInvoice {
+                            NavigationLink {
+                                InvoiceDetailView(invoice: invoice) {
+                                    await load()
+                                    await onChanged?()
+                                }
+                            } label: {
+                                LabeledContent(
+                                    "Invoice",
+                                    value: invoice.invoiceNumber ?? "View invoice"
+                                )
+                            }
+                        } else if item.linkedInvoiceId != nil {
+                            Text("Invoice linked — pull to refresh if it does not appear.")
+                                .font(.footnote)
+                                .foregroundStyle(NriTheme.slate)
+                        }
+                    }
+
                     if canStaffAct {
                         Section("Staff actions") {
                             Button("Assign employee") { showAssign = true }
+                            if canSetEstimate {
+                                Button("Set expected repair amount") { showEstimate = true }
+                            }
+                            if canSetPayer {
+                                Button("Confirm who pays") { showPayer = true }
+                            }
+                            if canMarkWorkCompleted {
+                                Button("Mark work completed") { showWorkCompleted = true }
+                            }
                             Button("Update status") { showUpdateStatus = true }
+                        } footer: {
+                            Text(
+                                "Flow: estimate → confirm payer (invoice emails owner/tenant, or company = no payment) → mark work done → mark invoice paid → close only when work and payment are both settled."
+                            )
                         }
                     }
 
@@ -475,6 +566,41 @@ struct ServiceRequestDetailView: View {
                 await onChanged?()
             }
         }
+        .sheet(isPresented: $showEstimate) {
+            SetRepairEstimateSheet { amount, comments in
+                item = try await appState.api.setServiceRequestEstimate(
+                    id: requestId,
+                    SetRepairEstimateBody(expectedAmount: amount, comments: comments)
+                )
+                history = try await appState.api.serviceRequestHistory(id: requestId)
+                await onChanged?()
+            }
+        }
+        .sheet(isPresented: $showPayer) {
+            SetServiceRequestPayerSheet { payerType, comments, workCompleted in
+                item = try await appState.api.setServiceRequestPayer(
+                    id: requestId,
+                    SetServiceRequestPayerBody(
+                        payerType: payerType,
+                        comments: comments,
+                        workCompleted: workCompleted
+                    )
+                )
+                history = try await appState.api.serviceRequestHistory(id: requestId)
+                await refreshLinkedInvoice()
+                await onChanged?()
+            }
+        }
+        .sheet(isPresented: $showWorkCompleted) {
+            MarkWorkCompletedSheet { comments in
+                item = try await appState.api.markServiceRequestWorkCompleted(
+                    id: requestId,
+                    comments: comments
+                )
+                history = try await appState.api.serviceRequestHistory(id: requestId)
+                await onChanged?()
+            }
+        }
         .task { await load() }
         .refreshable { await load() }
         .confirmationDialog(
@@ -500,9 +626,18 @@ struct ServiceRequestDetailView: View {
             item = try await detail
             history = try await events
             attachments = (try? await files) ?? []
+            await refreshLinkedInvoice()
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    private func refreshLinkedInvoice() async {
+        guard let invoiceId = item?.linkedInvoiceId else {
+            linkedInvoice = nil
+            return
+        }
+        linkedInvoice = try? await appState.api.invoice(id: invoiceId)
     }
 
     private func cancel() async {
@@ -671,6 +806,183 @@ private struct UpdateServiceRequestStatusSheet: View {
         let trimmed = comments.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
             try await onSave(status.rawValue, trimmed.isEmpty ? nil : trimmed)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct SetRepairEstimateSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var onSave: (Decimal, String?) async throws -> Void
+
+    @State private var amountText = ""
+    @State private var comments = ""
+    @State private var errorMessage: String?
+    @State private var isSaving = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Expected amount (₹)", text: $amountText)
+                        .keyboardType(.decimalPad)
+                    TextField("Comments (optional)", text: $comments, axis: .vertical)
+                        .lineLimit(3...6)
+                } footer: {
+                    Text("Sets the request to In Progress so you can confirm who pays next.")
+                }
+                if let errorMessage {
+                    Section { Text(errorMessage).foregroundStyle(NriTheme.terracotta) }
+                }
+            }
+            .navigationTitle("Repair estimate")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { Task { await save() } }
+                        .disabled(isSaving)
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        guard let amount = Decimal(string: amountText.trimmingCharacters(in: .whitespacesAndNewlines)),
+              amount > 0
+        else {
+            errorMessage = "Enter a valid expected amount greater than zero."
+            return
+        }
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+        let trimmed = comments.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            try await onSave(amount, trimmed.isEmpty ? nil : trimmed)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct SetServiceRequestPayerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var onSave: (String, String?, Bool) async throws -> Void
+
+    @State private var payerType: ServiceRequestPayerTypeOption = .OWNER
+    @State private var comments = ""
+    @State private var workCompleted = false
+    @State private var errorMessage: String?
+    @State private var isSaving = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Picker("Who pays", selection: $payerType) {
+                        ForEach(ServiceRequestPayerTypeOption.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
+                    }
+                    Toggle("Work already completed", isOn: $workCompleted)
+                    TextField(
+                        payerType == .COMPANY
+                            ? "Comments (required for company pay)"
+                            : "Comments (optional)",
+                        text: $comments,
+                        axis: .vertical
+                    )
+                    .lineLimit(3...8)
+                } footer: {
+                    Text(
+                        payerType == .COMPANY
+                            ? "No invoice is created. Status becomes No payment required."
+                            : "An invoice is created automatically in the payer’s name and emailed to them."
+                    )
+                }
+                if let errorMessage {
+                    Section { Text(errorMessage).foregroundStyle(NriTheme.terracotta) }
+                }
+            }
+            .navigationTitle("Confirm payer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Confirm") { Task { await save() } }
+                        .disabled(isSaving)
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        let trimmed = comments.trimmingCharacters(in: .whitespacesAndNewlines)
+        if payerType == .COMPANY && trimmed.isEmpty {
+            errorMessage = "Add comments explaining why the company covers this work."
+            return
+        }
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+        do {
+            try await onSave(payerType.rawValue, trimmed.isEmpty ? nil : trimmed, workCompleted)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+private struct MarkWorkCompletedSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    var onSave: (String?) async throws -> Void
+
+    @State private var comments = ""
+    @State private var errorMessage: String?
+    @State private var isSaving = false
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    TextField("Comments (optional)", text: $comments, axis: .vertical)
+                        .lineLimit(3...6)
+                } footer: {
+                    Text(
+                        "If payment is still pending, the request stays open with a clear payment-pending status until the invoice is marked paid."
+                    )
+                }
+                if let errorMessage {
+                    Section { Text(errorMessage).foregroundStyle(NriTheme.terracotta) }
+                }
+            }
+            .navigationTitle("Work completed")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Mark done") { Task { await save() } }
+                        .disabled(isSaving)
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        isSaving = true
+        errorMessage = nil
+        defer { isSaving = false }
+        let trimmed = comments.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            try await onSave(trimmed.isEmpty ? nil : trimmed)
             dismiss()
         } catch {
             errorMessage = error.localizedDescription

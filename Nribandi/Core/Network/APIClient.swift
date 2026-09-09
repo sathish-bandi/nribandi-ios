@@ -524,6 +524,36 @@ final class APIClient {
         )
     }
 
+    func setServiceRequestEstimate(id: UUID, _ body: SetRepairEstimateBody) async throws -> ServiceRequestItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/service-requests/\(id.uuidString.lowercased())/estimate",
+            body: body,
+            authorized: true,
+            as: ServiceRequestItem.self
+        )
+    }
+
+    func setServiceRequestPayer(id: UUID, _ body: SetServiceRequestPayerBody) async throws -> ServiceRequestItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/service-requests/\(id.uuidString.lowercased())/payer",
+            body: body,
+            authorized: true,
+            as: ServiceRequestItem.self
+        )
+    }
+
+    func markServiceRequestWorkCompleted(id: UUID, comments: String?) async throws -> ServiceRequestItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/service-requests/\(id.uuidString.lowercased())/work-completed",
+            body: MarkWorkCompletedBody(comments: comments),
+            authorized: true,
+            as: ServiceRequestItem.self
+        )
+    }
+
     func serviceRequestAttachments(id: UUID) async throws -> [ServiceRequestAttachmentItem] {
         try await send(
             method: "GET",
@@ -665,6 +695,16 @@ final class APIClient {
             body: Optional<String>.none,
             authorized: true,
             as: PageResponse<InvoiceItem>.self
+        )
+    }
+
+    func invoice(id: UUID) async throws -> InvoiceItem {
+        try await send(
+            method: "GET",
+            path: "/api/v1/invoices/\(id.uuidString.lowercased())",
+            body: Optional<String>.none,
+            authorized: true,
+            as: InvoiceItem.self
         )
     }
 

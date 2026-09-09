@@ -269,14 +269,28 @@ struct ServiceRequestItem: Decodable, Identifiable, Hashable {
     let description: String?
     let priority: String
     let status: String
+    let displayStatus: String?
     let assignedEmployeeId: UUID?
     let assignedEmployeeName: String?
     let sourceInspectionId: UUID?
+    let expectedAmount: Decimal?
+    let payerType: String?
+    let payerUserId: UUID?
+    let payerName: String?
+    let workCompleted: Bool?
+    let paymentStatus: String?
+    let payerNotes: String?
+    let linkedInvoiceId: UUID?
     let createdAt: String?
     let updatedAt: String?
 
     var canCancel: Bool {
         ["OPEN", "ASSIGNED", "IN_PROGRESS", "WAITING_FOR_PARTS"].contains(status)
+    }
+
+    var statusLabel: String {
+        if let displayStatus, !displayStatus.isEmpty { return displayStatus }
+        return status.replacingOccurrences(of: "_", with: " ")
     }
 }
 
@@ -742,6 +756,9 @@ struct InvoiceItem: Decodable, Identifiable, Hashable {
     let discount: Decimal?
     let totalAmount: Decimal?
     let status: String
+    let billedToUserId: UUID?
+    let billedToName: String?
+    let billedToRole: String?
     let items: [InvoiceLineItem]?
     let createdAt: String?
     let updatedAt: String?
@@ -807,9 +824,38 @@ struct ReviewTenantVerificationBody: Encodable {
 }
 
 enum ServiceRequestStatusOption: String, CaseIterable, Identifiable {
-    case OPEN, ASSIGNED, IN_PROGRESS, WAITING_FOR_PARTS, RESOLVED, CLOSED, REJECTED, CANCELLED
+    case OPEN, ASSIGNED, IN_PROGRESS, WAITING_FOR_PARTS
+    case AWAITING_PAYMENT, PAYMENT_RECEIVED, NO_PAYMENT_REQUIRED
+    case RESOLVED, CLOSED, REJECTED, CANCELLED
     var id: String { rawValue }
     var title: String { rawValue.replacingOccurrences(of: "_", with: " ") }
+}
+
+enum ServiceRequestPayerTypeOption: String, CaseIterable, Identifiable {
+    case COMPANY, OWNER, TENANT
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .COMPANY: return "Company (no payment required)"
+        case .OWNER: return "Owner pays"
+        case .TENANT: return "Tenant pays"
+        }
+    }
+}
+
+struct SetRepairEstimateBody: Encodable {
+    let expectedAmount: Decimal
+    let comments: String?
+}
+
+struct SetServiceRequestPayerBody: Encodable {
+    let payerType: String
+    let comments: String?
+    let workCompleted: Bool?
+}
+
+struct MarkWorkCompletedBody: Encodable {
+    let comments: String?
 }
 
 enum EnquiryStatusOption: String, CaseIterable, Identifiable {
