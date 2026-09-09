@@ -1,31 +1,26 @@
 import Foundation
 
-/// Maps to backend Spring profiles: local → local, TEST → qa, PROD → prod.
+/// API target. Debug builds can switch Local ↔ Prod; Release is always Prod.
 enum AppEnvironment: String, CaseIterable, Identifiable, Codable {
-    case local, test, prod
+    case local
+    case test // kept for older saved prefs; treated like Prod in the UI
+    case prod
 
     var id: String { rawValue }
+
+    /// Values shown in pickers (Local / Prod only).
+    static var selectableCases: [AppEnvironment] { [.local, .prod] }
 
     var displayName: String {
         switch self {
         case .local: return "Local"
-        case .test: return "TEST"
-        case .prod: return "PROD"
-        }
-    }
-
-    var backendProfile: String {
-        switch self {
-        case .local: return "local"
-        case .test: return "qa"
-        case .prod: return "prod"
+        case .test, .prod: return "Prod"
         }
     }
 
     var apiBaseURL: URL {
         switch self {
         case .local:
-            // iOS Simulator → Docker on this Mac
             return URL(string: "http://127.0.0.1:8082")!
         case .test:
             let raw = (Bundle.main.object(forInfoDictionaryKey: "NribandiTestAPIBaseURL") as? String)?
@@ -38,8 +33,8 @@ enum AppEnvironment: String, CaseIterable, Identifiable, Codable {
         }
     }
 
-    /// Debug / local Xcode runs may switch Local / TEST / PROD.
-    /// App Store and TestFlight (Release) are always PROD — no picker.
+    /// Debug / local Xcode runs may switch Local / Prod.
+    /// App Store and TestFlight (Release) are always Prod — no picker.
     static var allowsEnvironmentSelection: Bool {
         #if DEBUG
         true
@@ -56,11 +51,12 @@ enum AppEnvironment: String, CaseIterable, Identifiable, Codable {
             return .prod
         }
         if let raw = UserDefaults.standard.string(forKey: key), let env = AppEnvironment(rawValue: raw) {
-            return env
+            // Older builds could save "test" — map to Prod in the UI.
+            return env == .test ? .prod : env
         }
         if let forced = Bundle.main.object(forInfoDictionaryKey: "NribandiDefaultEnvironment") as? String,
            let env = AppEnvironment(rawValue: forced.lowercased()) {
-            return env
+            return env == .test ? .prod : env
         }
         return .local
     }
@@ -71,5 +67,20 @@ enum AppEnvironment: String, CaseIterable, Identifiable, Codable {
             return
         }
         UserDefaults.standard.set(rawValue, forKey: Self.key)
+    }
+}
+
+enum AppBuildInfo {
+    static var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—"
+    }
+
+    static var build: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "—"
+    }
+
+    /// e.g. "1.0.0 (12)"
+    static var versionAndBuild: String {
+        "\(version) (\(build))"
     }
 }

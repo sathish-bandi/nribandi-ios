@@ -60,8 +60,7 @@ struct EnvBadge: View {
     private var color: Color {
         switch env {
         case .local: return NriTheme.local
-        case .test: return NriTheme.test
-        case .prod: return NriTheme.prod
+        case .test, .prod: return NriTheme.prod
         }
     }
 }

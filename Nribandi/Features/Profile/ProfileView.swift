@@ -92,19 +92,23 @@ struct ProfileView: View {
                 }
 
                 if AppEnvironment.allowsEnvironmentSelection {
-                    Section("API environment") {
+                    Section("API") {
                         Picker("Environment", selection: Binding(
-                            get: { appState.environment },
+                            get: { appState.environment == .test ? .prod : appState.environment },
                             set: { newValue in Task { await appState.switchEnvironment(newValue) } }
                         )) {
-                            ForEach(AppEnvironment.allCases) { env in
+                            ForEach(AppEnvironment.selectableCases) { env in
                                 Text(env.displayName).tag(env)
                             }
                         }
-                        LabeledContent("Backend profile", value: appState.environment.backendProfile)
-                        Text(appState.environment.apiBaseURL.absoluteString)
-                            .font(.caption.monospaced())
-                            .foregroundStyle(NriTheme.slate)
+                        .pickerStyle(.segmented)
+                    }
+                }
+
+                Section("App") {
+                    LabeledContent("Version", value: AppBuildInfo.versionAndBuild)
+                    if !AppEnvironment.allowsEnvironmentSelection {
+                        LabeledContent("Environment", value: "Prod")
                     }
                 }
             }

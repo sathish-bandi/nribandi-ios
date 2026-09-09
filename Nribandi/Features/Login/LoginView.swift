@@ -36,22 +36,14 @@ struct LoginView: View {
                         VStack(alignment: .leading, spacing: 10) {
                             Text("Environment").font(.subheadline.weight(.semibold))
                             Picker("Environment", selection: Binding(
-                                get: { appState.environment },
+                                get: { appState.environment == .test ? .prod : appState.environment },
                                 set: { newValue in Task { await appState.switchEnvironment(newValue) } }
                             )) {
-                                ForEach(AppEnvironment.allCases) { env in
+                                ForEach(AppEnvironment.selectableCases) { env in
                                     Text(env.displayName).tag(env)
                                 }
                             }
                             .pickerStyle(.segmented)
-
-                            HStack(spacing: 8) {
-                                EnvBadge(env: appState.environment)
-                                Text(appState.environment.apiBaseURL.absoluteString)
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(NriTheme.slate)
-                                    .lineLimit(1)
-                            }
                         }
                     }
 
@@ -108,11 +100,10 @@ struct LoginView: View {
                         .foregroundStyle(NriTheme.slate)
                     }
 
-                    if AppEnvironment.allowsEnvironmentSelection {
-                        Text("Local talks to Docker on this Mac at 127.0.0.1:8082. Set TEST/PROD URLs in Info.plist when AWS is ready.")
-                            .font(.caption)
-                            .foregroundStyle(NriTheme.slate)
-                    }
+                    Text("v\(AppBuildInfo.versionAndBuild)")
+                        .font(.caption)
+                        .foregroundStyle(NriTheme.slate)
+                        .frame(maxWidth: .infinity)
                 }
                 .padding(24)
             }
