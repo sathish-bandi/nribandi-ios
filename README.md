@@ -96,6 +96,7 @@ In **Debug**, pick **TEST** or **PROD** in the app. **Release / App Store** alwa
 - Properties + units with **tenant / vacant** status on unit lists
 - **Unit detail:** current tenant (tap for People KYC), tenancy duration, rental agreement PDF, recent inspections with media, to-let enquiries on vacant units (staff CRUD, max 10)
 - Service requests with repair estimate, payer confirmation, payment-pending display statuses, and linked invoice
+- Company UPI / GPay / PhonePe payment IDs (admin manage; shown on invoices and pending SRs — no payment gateway)
 - Global enquiries
 - Profile (+ environment switcher in Debug only)
 
