@@ -67,7 +67,7 @@ struct UserListView: View {
                 } description: {
                     Text(
                         role == .TENANT
-                            ? "Only tenants on your properties (or ones you create) appear here."
+                            ? "Only current (active) tenants on your properties appear here. Past tenants stay on the unit history."
                             : "Tap + to add one."
                     )
                 } actions: {
