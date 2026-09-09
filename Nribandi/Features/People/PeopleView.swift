@@ -65,7 +65,11 @@ struct UserListView: View {
                 ContentUnavailableView {
                     Label("No \(title.lowercased())", systemImage: "person.2")
                 } description: {
-                    Text("Tap + to add one.")
+                    Text(
+                        role == .TENANT
+                            ? "Only tenants on your properties (or ones you create) appear here."
+                            : "Tap + to add one."
+                    )
                 } actions: {
                     Button("Add") { showCreate = true }
                         .buttonStyle(.borderedProminent)
