@@ -554,6 +554,51 @@ final class APIClient {
         )
     }
 
+    // MARK: - Company payment accounts (UPI / GPay / PhonePe)
+
+    func companyPaymentAccounts(includeInactive: Bool = false) async throws -> [CompanyPaymentAccountItem] {
+        var path = "/api/v1/company-payment-accounts"
+        if includeInactive {
+            path += "?includeInactive=true"
+        }
+        return try await send(
+            method: "GET",
+            path: path,
+            body: Optional<String>.none,
+            authorized: true,
+            as: [CompanyPaymentAccountItem].self
+        )
+    }
+
+    func createCompanyPaymentAccount(_ body: UpsertCompanyPaymentAccountBody) async throws -> CompanyPaymentAccountItem {
+        try await send(
+            method: "POST",
+            path: "/api/v1/company-payment-accounts",
+            body: body,
+            authorized: true,
+            as: CompanyPaymentAccountItem.self
+        )
+    }
+
+    func updateCompanyPaymentAccount(id: UUID, _ body: UpsertCompanyPaymentAccountBody) async throws -> CompanyPaymentAccountItem {
+        try await send(
+            method: "PUT",
+            path: "/api/v1/company-payment-accounts/\(id.uuidString.lowercased())",
+            body: body,
+            authorized: true,
+            as: CompanyPaymentAccountItem.self
+        )
+    }
+
+    func deleteCompanyPaymentAccount(id: UUID) async throws {
+        _ = try await sendMessage(
+            method: "DELETE",
+            path: "/api/v1/company-payment-accounts/\(id.uuidString.lowercased())",
+            body: Optional<String>.none,
+            authorized: true
+        )
+    }
+
     func serviceRequestAttachments(id: UUID) async throws -> [ServiceRequestAttachmentItem] {
         try await send(
             method: "GET",

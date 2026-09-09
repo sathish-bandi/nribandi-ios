@@ -67,6 +67,30 @@ struct ProfileView: View {
                     }
                 }
 
+                if role == .ADMIN {
+                    Section("Company settings") {
+                        NavigationLink("Payment IDs (UPI / GPay / PhonePe)") {
+                            CompanyPaymentAccountsAdminView()
+                        }
+                    }
+                }
+
+                // Visible to every signed-in role so payers know where to send money.
+                Section {
+                    NavigationLink("How to pay (company UPI)") {
+                        List {
+                            CompanyPaymentInstructionsSection()
+                        }
+                        .listStyle(.insetGrouped)
+                        .navigationTitle("How to pay")
+                        .navigationBarTitleDisplayMode(.inline)
+                    }
+                } header: {
+                    Text("Payments")
+                } footer: {
+                    Text("No payment gateway — use the company UPI / GPay / PhonePe IDs shown here.")
+                }
+
                 if AppEnvironment.allowsEnvironmentSelection {
                     Section("API environment") {
                         Picker("Environment", selection: Binding(

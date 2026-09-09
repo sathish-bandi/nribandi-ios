@@ -858,6 +858,44 @@ struct MarkWorkCompletedBody: Encodable {
     let comments: String?
 }
 
+enum PaymentProviderOption: String, CaseIterable, Identifiable {
+    case UPI, GPAY, PHONEPE, OTHER
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .UPI: return "UPI"
+        case .GPAY: return "GPay"
+        case .PHONEPE: return "PhonePe"
+        case .OTHER: return "Other"
+        }
+    }
+}
+
+struct CompanyPaymentAccountItem: Decodable, Identifiable, Hashable {
+    let id: UUID
+    let provider: String
+    let accountId: String
+    let displayName: String
+    let notes: String?
+    let active: Bool
+    let sortOrder: Int?
+    let createdAt: String?
+    let updatedAt: String?
+
+    var providerTitle: String {
+        PaymentProviderOption(rawValue: provider)?.title ?? provider
+    }
+}
+
+struct UpsertCompanyPaymentAccountBody: Encodable {
+    let provider: String
+    let accountId: String
+    let displayName: String
+    let notes: String?
+    let active: Bool
+    let sortOrder: Int
+}
+
 enum EnquiryStatusOption: String, CaseIterable, Identifiable {
     case NEW, CONTACTED, PROPERTY_SHARED, VISIT_SCHEDULED, FOLLOW_UP, CONVERTED, NOT_INTERESTED, CLOSED
     var id: String { rawValue }

@@ -153,6 +153,10 @@ struct InvoiceDetailView: View {
                 }
             }
 
+            if invoice.status == "APPROVED" || invoice.status == "SUBMITTED" {
+                CompanyPaymentInstructionsSection()
+            }
+
             if isStaff {
                 Section("Actions") {
                     if invoice.status == "DRAFT" {

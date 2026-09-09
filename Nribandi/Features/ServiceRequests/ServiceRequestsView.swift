@@ -448,6 +448,10 @@ struct ServiceRequestDetailView: View {
                         }
                     }
 
+                    if item.paymentStatus == "PENDING" || item.status == "AWAITING_PAYMENT" {
+                        CompanyPaymentInstructionsSection()
+                    }
+
                     if canStaffAct {
                         Section("Staff actions") {
                             Button("Assign employee") { showAssign = true }
